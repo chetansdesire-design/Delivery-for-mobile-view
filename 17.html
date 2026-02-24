@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Urban Casa | Supervisor Portal</title>
+    
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+
+    <style>
+        :root {
+            --bg-main: #f1f5f9; --sidebar-bg: #1e293b; --card-bg: #ffffff;
+            --accent-blue: #2563eb; --text-main: #0f172a; --text-dim: #64748b;
+            --danger: #dc2626; --success: #059669; --border-color: #e2e8f0;
+            --appr-bg: #f0fdf4;
+        }
+
+        body { margin: 0; font-family: 'Inter', sans-serif; background: var(--bg-main); color: var(--text-main); height: 100vh; overflow: hidden; }
+
+        /* Login Overlay */
+        #login-overlay { position: fixed; inset: 0; background: var(--bg-main); z-index: 9999; display: flex; align-items: center; justify-content: center; }
+        .login-box { background: var(--card-bg); padding: 30px; border-radius: 16px; text-align: center; width: 85%; max-width: 320px; box-shadow: 0 10px 25px rgba(0,0,0,0.1); }
+        .pass-input { width: 100%; padding: 12px; margin-bottom: 15px; border: 1px solid var(--border-color); border-radius: 8px; text-align: center; font-size: 18px; letter-spacing: 4px; box-sizing: border-box;}
+        .user-btn { width: 100%; padding: 15px; margin: 8px 0; border: none; border-radius: 8px; cursor: pointer; font-weight: 700; color: white; text-transform: uppercase; }
+
+        /* Success Animation */
+        #success-overlay { display: none; position: fixed; inset: 0; background: rgba(255,255,255,0.9); z-index: 10000; align-items: center; justify-content: center; flex-direction: column; }
+        .checkmark { width: 80px; height: 80px; border-radius: 50%; stroke: #059669; stroke-width: 4; fill: none; animation: scale 0.3s ease-in-out; }
+
+        /* Main App Layout */
+        #app-content { display: none; height: 100vh; flex-direction: column; }
+        .header { padding: 15px; background: var(--sidebar-bg); color: white; display: flex; justify-content: space-between; align-items: center; }
+        .stats-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; padding: 10px; background: #0f172a; }
+        .stat-card { background: rgba(255,255,255,0.05); padding: 8px; border-radius: 8px; text-align: center; }
+        .stat-val { font-size: 14px; font-weight: 800; display: block; color: white; }
+        .stat-lbl { font-size: 8px; text-transform: uppercase; opacity: 0.7; color: white; }
+
+        .filter-section { background: white; padding: 10px; border-bottom: 1px solid var(--border-color); }
+        .search-input { width: 100%; padding: 12px; border-radius: 8px; border: 1px solid #cbd5e1; font-size: 14px; box-sizing: border-box; margin-bottom: 10px; }
+        .filter-chips { display: flex; gap: 6px; overflow-x: auto; padding-bottom: 5px; }
+        .chip { padding: 6px 12px; border-radius: 20px; background: #f1f5f9; font-size: 10px; font-weight: 700; white-space: nowrap; border: 1px solid #e2e8f0; color: var(--text-dim); display: flex; align-items: center; }
+        .chip.active { background: var(--accent-blue); color: white; border-color: var(--accent-blue); }
+        .count-badge { background: rgba(0,0,0,0.08); padding: 1px 6px; border-radius: 10px; margin-left: 5px; font-size: 9px; }
+        .chip-unpaid.active { background: var(--danger) !important; border-color: var(--danger) !important; }
+
+        .container { padding: 12px; flex: 1; overflow-y: auto; }
+        .mobile-card { background: white; border-radius: 12px; padding: 15px; margin-bottom: 12px; border: 1px solid var(--border-color); }
+        .card-approved { background: var(--appr-bg); border-color: #bbf7d0; }
+        .mobile-date-input { border: 1px solid #cbd5e1; border-radius: 4px; padding: 4px; font-size: 11px; font-weight: 700; color: var(--accent-blue); }
+    </style>
+</head>
+<body>
+
+    <div id="login-overlay">
+        <div class="login-box">
+            <h2 style="color:var(--accent-blue); margin-top:0;">URBAN CASA</h2>
+            <input type="password" id="passField" class="pass-input" placeholder="••••">
+            <button class="user-btn" style="background:#059669;" onclick="login('Suman (Supervisor)')">SUMAN LOGIN</button>
+            <button class="user-btn" style="background:var(--sidebar-bg);" onclick="login('Admin')">ADMIN LOGIN</button>
+        </div>
+    </div>
+
+    <div id="success-overlay">
+        <h1 style="color:#059669;">✅</h1>
+        <p style="color:#059669; font-weight:800;">DISPATCHED</p>
+    </div>
+
+    <div id="app-content">
+        <div class="header">
+            <span style="font-weight:800; font-size:14px;">SUMAN | SUPERVISOR</span>
+            <button onclick="location.reload()" style="background:none; border:1px solid white; color:white; border-radius:4px; font-size:10px; padding:4px 8px;">LOGOUT</button>
+        </div>
+
+        <div class="stats-grid">
+            <div class="stat-card"><span class="stat-val" id="stat-pending-amt">₹0</span><span class="stat-lbl">To Collect</span></div>
+            <div class="stat-card"><span class="stat-val" style="color:#10b981" id="stat-total-del">0</span><span class="stat-lbl">Delivered</span></div>
+            <div class="stat-card"><span class="stat-val" style="color:#f59e0b" id="stat-qc-count">0</span><span class="stat-lbl">New QC</span></div>
+        </div>
+
+        <div class="filter-section">
+            <input type="text" id="mobSearch" class="search-input" placeholder="🔍 Search Name or Bill..." oninput="renderCards()">
+            <div class="filter-chips">
+                <div class="chip active" onclick="setStatusFilter('ALL', this)">ALL <span class="count-badge" id="cnt-all">0</span></div>
+                <div class="chip" onclick="setStatusFilter('NEW', this)">NEW <span class="count-badge" id="cnt-new">0</span></div>
+                <div class="chip" onclick="setStatusFilter('PENDING', this)">PENDING <span class="count-badge" id="cnt-pending">0</span></div>
+                <div class="chip" onclick="setStatusFilter('DELIVERED', this)">DONE <span class="count-badge" id="cnt-done">0</span></div>
+                <div class="chip chip-unpaid" style="color:var(--danger);" onclick="setStatusFilter('PAYMENT', this)">💰 UNPAID <span class="count-badge" id="cnt-pay">0</span></div>
+            </div>
+        </div>
+
+        <div class="container" id="card-list"></div>
+    </div>
+
+    <script>
+        const firebaseConfig = { databaseURL: "https://new-dispatch-approval-default-rtdb.firebaseio.com/" };
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.database();
+        const recordsRef = db.ref('dispatch_records');
+
+        let currentUser = '', globalData = [], currentStatusFilter = 'ALL';
+        const PASSWORDS = { 'Admin': 'admin123', 'Suman (Supervisor)': 'suman2024' };
+
+        function login(role) {
+            const pass = document.getElementById('passField').value;
+            if (pass !== PASSWORDS[role]) return alert("Wrong Password");
+            
+            currentUser = role;
+            document.getElementById('login-overlay').style.display = 'none';
+            document.getElementById('app-content').style.display = 'flex';
+            
+            loadData(); // Start fetching data immediately
+        }
+
+        function loadData() {
+            recordsRef.on('value', (snapshot) => {
+                const data = snapshot.val() || {};
+                globalData = Object.keys(data).map(k => ({...data[k], id: k})).reverse();
+                updateStats();
+                renderCards();
+            });
+        }
+
+        function updateStats() {
+            let stats = { amt: 0, done: 0, qc: 0, all: 0, new: 0, pending: 0, unpaid: 0 };
+            globalData.forEach(item => {
+                stats.all++;
+                if (item.statusText === 'NEW') { stats.new++; stats.qc++; }
+                if (item.statusText === 'PENDING') stats.pending++;
+                if (item.statusText === 'DELIVERED') stats.done++;
+                if (item.payPending === 'YES' && !item.payReceived) {
+                    stats.unpaid++;
+                    stats.amt += parseFloat(item.payAmount || 0);
+                }
+            });
+            document.getElementById('stat-pending-amt').innerText = `₹${stats.amt}`;
+            document.getElementById('stat-total-del').innerText = stats.done;
+            document.getElementById('stat-qc-count').innerText = stats.qc;
+            document.getElementById('cnt-all').innerText = stats.all;
+            document.getElementById('cnt-new').innerText = stats.new;
+            document.getElementById('cnt-pending').innerText = stats.pending;
+            document.getElementById('cnt-done').innerText = stats.done;
+            document.getElementById('cnt-pay').innerText = stats.unpaid;
+        }
+
+        function setStatusFilter(status, el) {
+            currentStatusFilter = status;
+            document.querySelectorAll('.chip').forEach(c => c.classList.remove('active'));
+            el.classList.add('active');
+            renderCards();
+        }
+
+        function renderCards() {
+            const list = document.getElementById('card-list');
+            const search = document.getElementById('mobSearch').value.toUpperCase();
+            list.innerHTML = '';
+
+            globalData.forEach(item => {
+                const matchesSearch = item.name.includes(search) || (item.billNo && item.billNo.includes(search));
+                let matchesStatus = (currentStatusFilter === 'ALL') || 
+                                    (currentStatusFilter === 'PAYMENT' ? (item.payPending === 'YES' && !item.payReceived) : (item.statusText === currentStatusFilter));
+
+                if (matchesSearch && matchesStatus) {
+                    const isApproved = item.approved === true;
+                    const isDel = item.statusText === 'DELIVERED';
+                    const card = document.createElement('div');
+                    card.className = `mobile-card ${isApproved && !isDel ? 'card-approved' : ''}`;
+                    
+                    // Logic to handle Bill Date (entry made) vs Scheduled Date
+                    const bDateRaw = item.billDate || item.date || "";
+                    const bDateFormatted = bDateRaw.includes('-') ? bDateRaw.split('-').reverse().join('/') : bDateRaw;
+
+                    card.innerHTML = `
+                        <div style="display:flex; justify-content:space-between;">
+                            <span style="font-weight:800;">${item.name}</span>
+                            <span class="status-pill status-${item.statusText.toLowerCase()}">${item.statusText}</span>
+                        </div>
+                        <div style="font-size:11px; color:var(--text-dim); margin-top:4px;">Bill: ${item.billNo || '-'} | Created: ${bDateFormatted}</div>
+                        <div style="margin: 10px 0; display:flex; justify-content:space-between;">
+                             <input type="date" class="mobile-date-input" value="${item.date}" onchange="recordsRef.child('${item.id}').update({date: this.value})">
+                             <span style="font-size:12px; font-weight:700; color:var(--accent-blue);">📍 ${item.loc}</span>
+                        </div>
+                        <div style="font-size:12px;">
+                            ${item.payPending === 'YES' ? `<b style="color:var(--danger)">COLLECT: ₹${item.payAmount}</b>` : '<span style="color:var(--success)">✅ Paid</span>'}
+                        </div>
+                        ${getActionBtn(item)}
+                    `;
+                    list.appendChild(card);
+                }
+            });
+        }
+
+        function getActionBtn(item) {
+            if (currentUser === 'Admin') return `<button onclick="recordsRef.child('${item.id}').update({approved:!${item.approved}})" style="width:100%; margin-top:10px; padding:10px;">APPROVE</button>`;
+            if (item.statusText === 'NEW') return `<button onclick="recordsRef.child('${item.id}').update({statusText:'PENDING'})" style="width:100%; background:var(--accent-blue); color:white; border:none; padding:12px; border-radius:8px; margin-top:10px; font-weight:700;">SEND TO OFFICE</button>`;
+            if (item.statusText === 'PENDING' && !item.approved) return `<div style="text-align:center; padding:12px; color:gray; font-size:12px;">⏳ Waiting Approval</div>`;
+            if (item.approved && item.statusText !== 'DELIVERED') return `<button onclick="shareAndDeliver('${item.id}')" style="width:100%; background:#25d366; color:white; border:none; padding:12px; border-radius:8px; margin-top:10px; font-weight:700;">📤 DISPATCH</button>`;
+            return `<div style="text-align:center; color:var(--success); font-weight:700; padding:10px;">✓ Delivered</div>`;
+        }
+
+        function shareAndDeliver(id) {
+            const item = globalData.find(i => i.id === id);
+            const dispatchDate = new Date().toLocaleDateString('en-GB');
+            const bDateRaw = item.billDate || item.date || "";
+            const bDate = bDateRaw.includes('-') ? bDateRaw.split('-').reverse().join('/') : bDateRaw;
+
+            const msg = `*URBAN CASA DISPATCH*\n--------------------------\n*Dispatch Date:* ${dispatchDate}\n*Bill Date:* ${bDate}\n*Bill No:* ${item.billNo || 'N/A'}\n*Customer:* ${item.name}\n*Area:* ${item.loc}\n*Qty:* ${item.qty || '1'}\n*Payment Status:* ${item.payPending === 'YES' ? '₹'+item.payAmount : 'PAID'}\n*QC Checked By:* Suman\n--------------------------\n📦 *Status:* Dispatched`;
+
+            document.getElementById('success-overlay').style.display = 'flex';
+            setTimeout(() => {
+                document.getElementById('success-overlay').style.display = 'none';
+                recordsRef.child(id).update({ statusText: 'DELIVERED' });
+                window.open(`https://wa.me/?text=${encodeURIComponent(msg)}`, '_blank');
+            }, 1000);
+        }
+    </script>
+</body>
+</html>

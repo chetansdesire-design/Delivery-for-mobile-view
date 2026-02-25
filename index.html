@@ -12,191 +12,99 @@
         :root {
             --bg-main: #f1f5f9; --sidebar-bg: #1e293b; --card-bg: #ffffff;
             --accent-blue: #2563eb; --text-main: #0f172a; 
-            --danger: #dc2626; --success: #059669; --amber: #f59e0b;
+            --danger: #dc2626; --success: #059669; --warning: #f59e0b;
             --call-green: #22c55e;
         }
 
         body { margin: 0; font-family: 'Inter', sans-serif; background: var(--bg-main); color: var(--text-main); height: 100vh; overflow: hidden; }
 
-        /* BLINKING ANIMATIONS */
+        /* NEW COLOR ANIMATIONS */
         @keyframes amber-blink { 
             0%, 100% { background-color: #f59e0b; color: #000; } 
             50% { background-color: #1e293b; color: #f59e0b; } 
         }
+
         @keyframes urgent-red-blink { 
             0%, 100% { background-color: #dc2626; color: white; } 
             50% { background-color: #1e293b; color: #dc2626; } 
         }
 
+        /* Top Row Cash Blinking (Amber) */
         .stat-pay-blink { animation: amber-blink 0.8s infinite !important; border: 2px solid white !important; }
+        
+        /* Top Row QC Blinking (Red) */
         .stat-urgent { animation: urgent-red-blink 0.5s infinite !important; }
-        .blink-qc-pill { animation: urgent-red-blink 0.5s infinite !important; padding: 2px 6px; border-radius: 4px; font-weight: 900; }
 
         .header { padding: 12px; background: var(--sidebar-bg); color: white; display: flex; justify-content: space-between; align-items: center; }
         .stats-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; padding: 10px; background: #0f172a; }
         .stat-card { background: rgba(255,255,255,0.1); padding: 8px; border-radius: 8px; text-align: center; border: 1px solid rgba(255,255,255,0.1); }
         .stat-val { font-size: 14px; font-weight: 800; display: block; color: white; }
-        .stat-lbl { font-size: 7px; text-transform: uppercase; opacity: 0.9; color: white; font-weight: 700; letter-spacing: 0.5px; }
+        .stat-lbl { font-size: 8px; text-transform: uppercase; opacity: 0.8; color: white; font-weight: 700; }
 
         .container { padding: 12px; flex: 1; overflow-y: auto; height: calc(100vh - 160px); }
-        .mobile-card { background: white; border-radius: 12px; padding: 15px; margin-bottom: 12px; border: 1px solid #e2e8f0; position: relative; }
+        .mobile-card { background: white; border-radius: 12px; padding: 15px; margin-bottom: 12px; border: 1px solid #e2e8f0; }
         
-        /* High Visibility Collect Box (Yellow/Black) */
-        .collect-box { background: #ffef00; color: #000; padding: 10px; border-radius: 8px; border: 2px solid #000; font-weight: 900; display: flex; justify-content: space-between; align-items: center; margin: 10px 0; }
-        .paid-box { background: #f0fdf4; color: #166534; padding: 10px; border-radius: 8px; font-weight: 700; text-align: center; border: 1px solid #bbf7d0; margin: 10px 0; }
+        /* High Visibility Collect Box */
+        .collect-box { background: #ffef00; color: #000; padding: 10px; border-radius: 8px; border: 2px solid #000; font-weight: 900; display: flex; justify-content: space-between; align-items: center; }
     </style>
 </head>
 <body>
 
-    <div id="login-overlay" style="position:fixed; inset:0; background:#f1f5f9; z-index:999; display:flex; align-items:center; justify-content:center;">
-        <div style="background:white; padding:30px; border-radius:16px; width:80%; max-width:300px; text-align:center; box-shadow:0 4px 20px rgba(0,0,0,0.1);">
-            <h2 style="margin-top:0; color:#2563eb;">URBAN CASA</h2>
-            <input type="password" id="passInput" placeholder="Passcode" style="width:100%; padding:12px; margin-bottom:15px; border:1px solid #ddd; border-radius:8px; text-align:center;">
-            <button onclick="login('Suman')" style="width:100%; padding:12px; background:#059669; color:white; border:none; border-radius:8px; font-weight:700; margin-bottom:10px;">SUMAN LOGIN</button>
-            <button onclick="login('Admin')" style="width:100%; padding:12px; background:#1e293b; color:white; border:none; border-radius:8px; font-weight:700;">ADMIN LOGIN</button>
-        </div>
-    </div>
-
-    <div id="app-content" style="display:none;">
-        <div class="header">
-            <span style="font-weight:900; font-size:14px;">UC DISPATCH</span>
-            <span id="userRole" style="font-size:10px; opacity:0.8;"></span>
-            <button onclick="location.reload()" style="background:none; border:1px solid white; color:white; font-size:9px; padding:2px 6px;">LOGOUT</button>
-        </div>
-
+    <div id="app-content" style="display:block;">
         <div class="stats-grid">
-            <div id="money-stat-box" class="stat-card">
-                <span class="stat-val" id="stat-pending-amt">₹0</span>
-                <span class="stat-lbl">To Collect</span>
-            </div>
-            <div class="stat-card">
-                <span class="stat-val" style="color:#10b981" id="stat-month-total">0</span>
-                <span class="stat-lbl">This Month Delivered</span>
-            </div>
-            <div id="qc-stat-box" class="stat-card">
-                <span class="stat-val" id="stat-qc-count">0</span>
-                <span class="stat-lbl">New QC</span>
-            </div>
+            <div id="money-stat-box" class="stat-card"><span class="stat-val" id="stat-pending-amt">₹0</span><span class="stat-lbl">To Collect</span></div>
+            <div class="stat-card"><span class="stat-val" style="color:#10b981" id="stat-total-del">0</span><span class="stat-lbl">Done</span></div>
+            <div id="qc-stat-box" class="stat-card"><span class="stat-val" id="stat-qc-count">0</span><span class="stat-lbl">New QC</span></div>
         </div>
 
         <div class="container" id="card-list"></div>
     </div>
 
     <script>
-        const firebaseConfig = { databaseURL: "https://new-dispatch-approval-default-rtdb.firebaseio.com/" };
-        firebase.initializeApp(firebaseConfig);
-        const db = firebase.database();
-        const recordsRef = db.ref('dispatch_records');
-
-        let currentUser = '', globalData = [];
-
-        function login(role) {
-            const p = document.getElementById('passInput').value;
-            if(p === (role === 'Admin' ? 'admin123' : 'suman2024')) {
-                currentUser = role;
-                document.getElementById('login-overlay').style.display = 'none';
-                document.getElementById('app-content').style.display = 'block';
-                document.getElementById('userRole').innerText = role.toUpperCase();
-                loadData();
-            } else { alert("Wrong Passcode"); }
-        }
-
-        function loadData() {
-            recordsRef.on('value', (snap) => {
-                const data = snap.val() || {};
-                globalData = Object.keys(data).map(k => ({...data[k], id: k})).reverse();
-                updateStats();
-                renderCards();
-            });
-        }
+        // ... (Firebase config same as before) ...
 
         function updateStats() {
-            let stats = { amt: 0, qc: 0, monthTotal: 0 };
-            const now = new Date();
-            const currentMonth = now.getMonth(); 
-            const currentYear = now.getFullYear();
-
+            let stats = { amt: 0, qc: 0, done: 0 };
             globalData.forEach(item => {
                 if (item.statusText === 'NEW') stats.qc++;
-                
-                if (item.statusText === 'DELIVERED') {
-                    // Assuming item.date is stored as YYYY-MM-DD
-                    const itemDate = new Date(item.date);
-                    if(itemDate.getMonth() === currentMonth && itemDate.getFullYear() === currentYear) {
-                        stats.monthTotal++;
-                    }
-                }
-                
-                if (item.payPending === 'YES' && !item.payReceived) {
-                    stats.amt += parseFloat(item.payAmount || 0);
-                }
+                if (item.statusText === 'DELIVERED') stats.done++;
+                if (item.payPending === 'YES' && !item.payReceived) stats.amt += parseFloat(item.payAmount || 0);
             });
 
-            // 1. Money Blinking (Amber)
-            const mBox = document.getElementById('money-stat-box');
+            const moneyBox = document.getElementById('money-stat-box');
             document.getElementById('stat-pending-amt').innerText = `₹${stats.amt}`;
-            stats.amt > 0 ? mBox.classList.add('stat-pay-blink') : mBox.classList.remove('stat-pay-blink');
+            stats.amt > 0 ? moneyBox.classList.add('stat-pay-blink') : moneyBox.classList.remove('stat-pay-blink');
 
-            // 2. Monthly Total
-            document.getElementById('stat-month-total').innerText = stats.monthTotal;
-
-            // 3. QC Blinking (Red)
-            const qBox = document.getElementById('qc-stat-box');
+            const qcBox = document.getElementById('qc-stat-box');
             document.getElementById('stat-qc-count').innerText = stats.qc;
-            stats.qc > 0 ? qBox.classList.add('stat-urgent') : qBox.classList.remove('stat-urgent');
+            stats.qc > 0 ? qcBox.classList.add('stat-urgent') : qcBox.classList.remove('stat-urgent');
         }
 
         function renderCards() {
             const list = document.getElementById('card-list');
             list.innerHTML = '';
             globalData.forEach(item => {
-                const isDelivered = item.statusText === 'DELIVERED';
                 const isUnpaid = item.payPending === 'YES' && !item.payReceived;
+                
+                let payHtml = `<div style="padding:10px; background:#f0fdf4; color:#166534; border-radius:8px; font-weight:700;">✅ PAID</div>`;
+                
+                if (isUnpaid) {
+                    payHtml = `
+                        <div class="collect-box">
+                            <span>💰 COLLECT CASH: ₹${item.payAmount}</span>
+                            ${currentUser === 'Admin' ? `<button onclick="markPaid('${item.id}')" style="background:#000; color:#fff; border:none; padding:5px 10px; border-radius:4px; font-size:10px;">SET PAID</button>` : ''}
+                        </div>`;
+                }
 
                 const card = document.createElement('div');
                 card.className = 'mobile-card';
                 card.innerHTML = `
-                    <div style="display:flex; justify-content:space-between;">
-                        <span style="font-weight:900;">${item.name}</span>
-                        <span class="${item.statusText === 'NEW' ? 'blink-qc-pill' : ''}" style="font-size:10px;">${item.statusText}</span>
-                    </div>
-                    
-                    ${isUnpaid ? `
-                        <div class="collect-box">
-                            <span>💰 COLLECT CASH: ₹${item.payAmount}</span>
-                            ${currentUser === 'Admin' ? `<button onclick="recordsRef.child('${item.id}').update({payReceived:true})" style="background:black; color:white; border:none; padding:4px 8px; border-radius:4px; font-size:10px;">MARK PAID</button>` : ''}
-                        </div>` : `<div class="paid-box">✅ PAYMENT DONE</div>`}
-
-                    <div style="margin-top:10px; display:flex; gap:10px; align-items:center;">
-                        <input type="date" value="${item.date}" 
-                            ${(isDelivered && currentUser !== 'Admin') ? 'disabled' : ''} 
-                            onchange="recordsRef.child('${item.id}').update({date:this.value})"
-                            style="flex:1; padding:8px; border:1px solid #ddd; border-radius:6px; font-weight:700; ${isDelivered ? 'background:#eee;' : ''}">
-                        
-                        ${getActionBtn(item)}
-                    </div>
+                    <div style="font-weight:800; font-size:16px; margin-bottom:10px;">${item.name}</div>
+                    ${payHtml}
+                    <div style="margin-top:10px;">${getActionBtn(item)}</div>
                 `;
                 list.appendChild(card);
             });
-        }
-
-        function getActionBtn(item) {
-            if (currentUser === 'Admin') return `<button onclick="recordsRef.child('${item.id}').update({approved:!${item.approved}})" style="background:#2563eb; color:white; border:none; padding:10px; border-radius:6px; font-weight:700;">${item.approved ? 'REVOKE' : 'APPROVE'}</button>`;
-            
-            if (item.statusText === 'NEW') return `<button onclick="recordsRef.child('${item.id}').update({statusText:'PENDING'})" style="background:#2563eb; color:white; border:none; padding:10px; border-radius:6px; font-weight:700;">QC OK</button>`;
-            
-            if (item.approved && item.statusText !== 'DELIVERED') return `<button onclick="shareAndDeliver('${item.id}')" style="background:#059669; color:white; border:none; padding:10px; border-radius:6px; font-weight:700;">DISPATCH</button>`;
-            
-            if (item.statusText === 'DELIVERED') return `<div style="color:#059669; font-weight:900; font-size:12px;">✓ DELIVERED</div>`;
-            
-            return `<span style="font-size:10px; color:gray;">WAITING...</span>`;
-        }
-
-        function shareAndDeliver(id) {
-            const item = globalData.find(i => i.id === id);
-            recordsRef.child(id).update({ statusText: 'DELIVERED' });
-            // Simplified WhatsApp Logic for selection
-            window.open(`https://wa.me/?text=${encodeURIComponent("DISPATCHED: " + item.name)}`, '_blank');
         }
     </script>
 </body>

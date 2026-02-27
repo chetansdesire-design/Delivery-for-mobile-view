@@ -13,7 +13,7 @@
             --bg-main: #f1f5f9; --sidebar-bg: #1e293b; --card-bg: #ffffff;
             --accent-blue: #2563eb; --text-main: #0f172a; --text-dim: #64748b;
             --danger: #dc2626; --success: #059669; --border-color: #e2e8f0;
-            --call-green: #22c55e;
+            --call-green: #22c55e; --tomorrow-blue: #0284c7;
         }
 
         body { margin: 0; font-family: 'Inter', sans-serif; background: var(--bg-main); color: var(--text-main); height: 100vh; overflow: hidden; }
@@ -36,6 +36,13 @@
         .stat-urgent { animation: rapid-blink 0.6s infinite !important; }
         .blink-pay-text { animation: blink-pay-urgent 0.7s infinite; font-weight: 900; }
 
+        /* Day Highlights */
+        .chip.today-active { background: var(--success) !important; color: white !important; border-color: var(--success) !important; }
+        .chip.tomorrow-active { background: var(--tomorrow-blue) !important; color: white !important; border-color: var(--tomorrow-blue) !important; }
+        
+        .card-today { border: 2px solid var(--success) !important; box-shadow: 0 0 12px rgba(34, 197, 94, 0.2); position: relative; }
+        .today-tag { position: absolute; top: -8px; right: 10px; background: var(--success); color: white; font-size: 8px; font-weight: 900; padding: 2px 6px; border-radius: 4px; z-index: 10; }
+
         #login-overlay { position: fixed; inset: 0; background: var(--bg-main); z-index: 9999; display: flex; align-items: center; justify-content: center; }
         .login-box { background: var(--card-bg); padding: 30px; border-radius: 16px; text-align: center; width: 85%; max-width: 320px; box-shadow: 0 10px 25px rgba(0,0,0,0.1); }
         .pass-input { width: 100%; padding: 12px; margin-bottom: 15px; border: 1px solid var(--border-color); border-radius: 8px; text-align: center; font-size: 18px; letter-spacing: 4px; }
@@ -48,15 +55,15 @@
         .stat-val { font-size: 14px; font-weight: 800; display: block; color: white; }
         .stat-lbl { font-size: 8px; text-transform: uppercase; opacity: 0.7; color: white; }
 
-        .search-container { padding: 10px; background: white; display: none; }
+        .search-container { padding: 10px; background: white; }
         #searchInput { width: 100%; padding: 10px; border: 1px solid var(--border-color); border-radius: 8px; font-size: 14px; box-sizing: border-box; }
 
-        .filter-chips { display: flex; gap: 6px; overflow-x: auto; padding: 10px; background: white; border-bottom: 1px solid #e2e8f0; }
-        .chip { padding: 6px 12px; border-radius: 20px; background: #f1f5f9; font-size: 10px; font-weight: 700; white-space: nowrap; border: 1px solid #e2e8f0; }
+        .filter-chips { display: flex; gap: 6px; overflow-x: auto; padding: 10px; background: white; border-bottom: 1px solid #e2e8f0; scrollbar-width: none; }
+        .chip { padding: 6px 12px; border-radius: 20px; background: #f1f5f9; font-size: 10px; font-weight: 700; white-space: nowrap; border: 1px solid #e2e8f0; color: var(--text-dim); }
         .chip.active { background: var(--accent-blue); color: white; }
 
         .container { padding: 12px; flex: 1; overflow-y: auto; }
-        .mobile-card { background: white; border-radius: 12px; padding: 15px; margin-bottom: 12px; border: 1px solid var(--border-color); position: relative; }
+        .mobile-card { background: white; border-radius: 12px; padding: 15px; margin-bottom: 12px; border: 1px solid var(--border-color); position: relative; transition: 0.3s; }
         .card-approved { border-left: 5px solid #059669; background: #f0fdf4; }
         
         #success-overlay { display: none; position: fixed; inset: 0; background: rgba(255,255,255,0.95); z-index: 10000; align-items: center; justify-content: center; flex-direction: column; }
@@ -91,10 +98,12 @@
         </div>
 
         <div class="filter-chips">
-            <div class="chip active" onclick="setStatusFilter('ALL', this)">ALL <span id="cnt-all"></span></div>
-            <div class="chip" onclick="setStatusFilter('NEW', this)">NEW <span id="cnt-new"></span></div>
-            <div class="chip" onclick="setStatusFilter('PENDING', this)">PENDING <span id="cnt-pending"></span></div>
-            <div class="chip" onclick="setStatusFilter('DELIVERED', this)">DONE <span id="cnt-done"></span></div>
+            <div class="chip active" onclick="setFilter('ALL', this)">ALL <span id="cnt-all"></span></div>
+            <div class="chip" style="color:var(--success); border-color:var(--success);" onclick="setFilter('TODAY', this)">TODAY <span id="cnt-today"></span></div>
+            <div class="chip" style="color:var(--tomorrow-blue); border-color:var(--tomorrow-blue);" onclick="setFilter('TOMORROW', this)">TOMORROW <span id="cnt-tomorrow"></span></div>
+            <div class="chip" onclick="setFilter('NEW', this)">NEW <span id="cnt-new"></span></div>
+            <div class="chip" onclick="setFilter('PENDING', this)">PENDING <span id="cnt-pending"></span></div>
+            <div class="chip" onclick="setFilter('DELIVERED', this)">DONE <span id="cnt-done"></span></div>
         </div>
 
         <div id="searchBar" class="search-container">
@@ -110,7 +119,7 @@
         const db = firebase.database();
         const recordsRef = db.ref('dispatch_records');
 
-        let currentUser = '', globalData = [], currentStatusFilter = 'ALL';
+        let currentUser = '', globalData = [], currentFilter = 'ALL';
 
         function login(role) {
             const pass = document.getElementById('passField').value;
@@ -131,71 +140,91 @@
             });
         }
 
+        function getDateStr(offset = 0) {
+            const d = new Date();
+            d.setDate(d.getDate() + offset);
+            return d.toISOString().split('T')[0];
+        }
+
+        function setFilter(filterType, el) {
+            currentFilter = filterType;
+            document.querySelectorAll('.chip').forEach(c => c.classList.remove('active', 'today-active', 'tomorrow-active'));
+            
+            if (filterType === 'TODAY') el.classList.add('today-active');
+            else if (filterType === 'TOMORROW') el.classList.add('tomorrow-active');
+            else el.classList.add('active');
+            
+            document.getElementById('searchBar').style.display = (filterType === 'ALL') ? 'block' : 'none';
+            if(filterType !== 'ALL') document.getElementById('searchInput').value = '';
+            renderCards();
+        }
+
         function updateStats() {
-            let stats = { amt: 0, monthDone: 0, qc: 0, all: 0, new: 0, pending: 0 };
+            let stats = { amt: 0, monthDone: 0, qc: 0, all: 0, new: 0, pending: 0, today: 0, tomorrow: 0 };
             const now = new Date();
-            const currentMonth = now.getMonth();
-            const currentYear = now.getFullYear();
+            const todayStr = getDateStr(0);
+            const tomorrowStr = getDateStr(1);
 
             globalData.forEach(item => {
                 stats.all++;
+                if (item.date === todayStr) stats.today++;
+                if (item.date === tomorrowStr) stats.tomorrow++;
                 if (item.statusText === 'NEW') { stats.new++; stats.qc++; }
                 if (item.statusText === 'PENDING') stats.pending++;
                 if (item.statusText === 'DELIVERED') {
                     const itemDate = new Date(item.date);
-                    if (itemDate.getMonth() === currentMonth && itemDate.getFullYear() === currentYear) stats.monthDone++;
+                    if (itemDate.getMonth() === now.getMonth() && itemDate.getFullYear() === now.getFullYear()) stats.monthDone++;
                 }
                 if (item.payPending === 'YES' && !item.payReceived) stats.amt += parseFloat(item.payAmount || 0);
             });
 
-            const moneyVal = document.getElementById('stat-pending-amt');
-            moneyVal.innerText = `₹${stats.amt}`;
-            if(stats.amt > 0) moneyVal.classList.add('stat-pay-blink');
-            else moneyVal.classList.remove('stat-pay-blink');
-
-            document.getElementById('stat-qc-count').innerText = stats.qc;
-            const qcBox = document.getElementById('qc-stat-box');
-            if(stats.qc > 0) qcBox.classList.add('stat-urgent');
-            else qcBox.classList.remove('stat-urgent');
-
-            document.getElementById('stat-month-del').innerText = stats.monthDone;
             document.getElementById('cnt-all').innerText = `(${stats.all})`;
+            document.getElementById('cnt-today').innerText = `(${stats.today})`;
+            document.getElementById('cnt-tomorrow').innerText = `(${stats.tomorrow})`;
             document.getElementById('cnt-new').innerText = `(${stats.new})`;
             document.getElementById('cnt-pending').innerText = `(${stats.pending})`;
             document.getElementById('cnt-done').innerText = `(${stats.monthDone})`;
-        }
 
-        function setStatusFilter(status, el) {
-            currentStatusFilter = status;
-            document.querySelectorAll('.chip').forEach(c => c.classList.remove('active'));
-            el.classList.add('active');
-            
-            document.getElementById('searchBar').style.display = (status === 'ALL') ? 'block' : 'none';
-            if(status !== 'ALL') document.getElementById('searchInput').value = '';
-            
-            renderCards();
+            const moneyVal = document.getElementById('stat-pending-amt');
+            moneyVal.innerText = `₹${stats.amt}`;
+            stats.amt > 0 ? moneyVal.classList.add('stat-pay-blink') : moneyVal.classList.remove('stat-pay-blink');
+
+            document.getElementById('stat-qc-count').innerText = stats.qc;
+            const qcBox = document.getElementById('qc-stat-box');
+            stats.qc > 0 ? qcBox.classList.add('stat-urgent') : qcBox.classList.remove('stat-urgent');
+            document.getElementById('stat-month-del').innerText = stats.monthDone;
         }
 
         function renderCards() {
             const list = document.getElementById('card-list');
             const searchTerm = document.getElementById('searchInput').value.toLowerCase();
+            const todayStr = getDateStr(0);
+            const tomorrowStr = getDateStr(1);
             list.innerHTML = '';
 
             globalData.forEach(item => {
-                if (currentStatusFilter !== 'ALL' && item.statusText !== currentStatusFilter) return;
-                
-                if (currentStatusFilter === 'ALL' && searchTerm) {
-                    const match = (item.name || '').toLowerCase().includes(searchTerm) || 
-                                  (item.loc || '').toLowerCase().includes(searchTerm) || 
-                                  (item.billNo || '').toLowerCase().includes(searchTerm);
-                    if (!match) return;
+                let isMatch = false;
+                if (currentFilter === 'ALL') isMatch = true;
+                else if (currentFilter === 'TODAY' && item.date === todayStr) isMatch = true;
+                else if (currentFilter === 'TOMORROW' && item.date === tomorrowStr) isMatch = true;
+                else if (item.statusText === currentFilter) isMatch = true;
+
+                if (!isMatch) return;
+
+                if (currentFilter === 'ALL' && searchTerm) {
+                    const sMatch = (item.name || '').toLowerCase().includes(searchTerm) || 
+                                   (item.loc || '').toLowerCase().includes(searchTerm) || 
+                                   (item.billNo || '').toLowerCase().includes(searchTerm);
+                    if (!sMatch) return;
                 }
 
                 const isDelivered = item.statusText === 'DELIVERED';
-                const isQC = item.statusText === 'NEW';
+                const isToday = item.date === todayStr;
                 const card = document.createElement('div');
-                card.className = `mobile-card ${item.approved && !isDelivered ? 'card-approved' : ''}`;
+                card.className = `mobile-card ${item.approved && !isDelivered ? 'card-approved' : ''} ${isToday && !isDelivered ? 'card-today' : ''}`;
+                
                 card.innerHTML = `
+                    ${isToday && !isDelivered ? '<span class="today-tag">Today</span>' : ''}
                     <div style="display:flex; justify-content:space-between; align-items:flex-start;">
                         <div style="display:flex; flex-direction:column; flex:1;">
                             <div style="display:flex; align-items:center; gap:8px;">
@@ -204,7 +233,7 @@
                             </div>
                             <div style="font-size:11px; color:gray; margin-top:4px;">Bill: ${item.billNo || 'NA'} | Exe: ${item.exec || 'NA'}</div>
                         </div>
-                        <span class="status-pill ${isQC ? 'blink-qc-rapid' : ''}" style="font-size:10px; font-weight:900; min-width:60px; text-align:right;">${item.statusText}</span>
+                        <span class="status-pill ${item.statusText === 'NEW' ? 'blink-qc-rapid' : ''}" style="font-size:10px; font-weight:900; min-width:60px; text-align:right;">${item.statusText}</span>
                     </div>
                     <div style="display:flex; justify-content:space-between; align-items:center; margin:10px 0; padding-top:10px; border-top:1px solid #eee;">
                         <div style="flex: 1;">

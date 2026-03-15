@@ -1,0 +1,270 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Urban Casa | Dispatch Portal</title>
+    
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+    
+    <style>
+        :root { --bg: #f1f5f9; --dark: #1e293b; --accent: #2563eb; --danger: #dc2626; --success: #059669; }
+        body { margin: 0; font-family: 'Inter', sans-serif; background: var(--bg); overflow: hidden; }
+        
+        /* --- BLINKING LOGIC --- */
+        @keyframes pulse-money-stat {
+            0%, 100% { color: #ef4444; transform: scale(1); }
+            50% { color: #ffffff; transform: scale(1.1); text-shadow: 0 0 10px rgba(239,68,68,0.8); }
+        }
+        .stat-money-blink { animation: pulse-money-stat 1s infinite; display: inline-block; font-weight: 900; }
+
+        @keyframes flash-qc-box {
+            0%, 100% { background-color: #dc2626; color: white; }
+            50% { background-color: rgba(255,255,255,0.1); color: #dc2626; }
+        }
+        .stat-qc-blink { animation: flash-qc-box 0.6s infinite !important; border: 1px solid #dc2626 !important; border-radius: 8px;}
+
+        @keyframes alert-badge { 
+            0%, 100% { background: #dc2626; color: white; border-color: #dc2626; } 
+            50% { background: transparent; color: #dc2626; border-color: transparent; } 
+        }
+        .card-badge-blink { animation: alert-badge 0.5s infinite; border-radius: 4px; padding: 4px 8px; font-weight: 900; border: 1px solid transparent; }
+
+        @keyframes alert-text {
+            0%, 100% { opacity: 1; color: #dc2626; }
+            50% { opacity: 0.3; color: #000; }
+        }
+        .card-pay-blink { animation: alert-text 0.8s infinite; font-weight: 900; font-size: 13px; }
+
+        /* --- LAYOUT --- */
+        #login-overlay { position: fixed; inset: 0; background: var(--bg); z-index: 9999; display: flex; align-items: center; justify-content: center; }
+        .login-box { background: white; padding: 30px; border-radius: 16px; width: 85%; max-width: 320px; text-align: center; box-shadow: 0 10px 25px rgba(0,0,0,0.1); }
+        .pass-input { width: 100%; padding: 12px; margin-bottom: 15px; border: 1px solid #e2e8f0; border-radius: 8px; text-align: center; font-size: 20px; letter-spacing: 4px; }
+        
+        #app-content { display: none; height: 100vh; flex-direction: column; }
+        .header { padding: 15px; background: var(--dark); color: white; display: flex; justify-content: space-between; align-items: center; }
+        .stats { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; padding: 10px; background: #0f172a; color: white; text-align: center; }
+        .stat-card { background: rgba(255,255,255,0.1); padding: 8px; border-radius: 8px; font-size: 12px; transition: all 0.3s ease; }
+        
+        .search-container { padding: 10px; background: white; border-bottom: 1px solid #e2e8f0; }
+        #searchInput { width: 100%; padding: 12px; border: 1px solid #e2e8f0; border-radius: 8px; outline: none; box-sizing: border-box; }
+        
+        .filter-chips { display: flex; gap: 8px; overflow-x: auto; padding: 10px; background: white; scrollbar-width: none; }
+        .chip { padding: 6px 14px; border-radius: 20px; background: #f1f5f9; font-size: 11px; font-weight: 700; white-space: nowrap; cursor: pointer; border: 1px solid #e2e8f0; }
+        .chip.active { background: var(--accent); color: white; }
+
+        .container { padding: 12px; flex: 1; overflow-y: auto; }
+        .mobile-card { background: white; border-radius: 12px; padding: 15px; margin-bottom: 12px; border: 1px solid #e2e8f0; position: relative; }
+        .card-approved { border-left: 5px solid var(--success); background: #f0fdf4; }
+    </style>
+</head>
+<body>
+
+    <div id="login-overlay">
+        <div class="login-box">
+            <h2 style="color:var(--accent); margin-top:0;">URBAN CASA</h2>
+            <input type="password" id="passField" class="pass-input" placeholder="••••">
+            <button onclick="login('Suman (Supervisor)')" style="width:100%; padding:14px; background:var(--success); color:white; border:none; border-radius:8px; font-weight:700; margin-bottom:10px;">SUMAN LOGIN</button>
+            <button onclick="login('Admin')" style="width:100%; padding:14px; background:var(--dark); color:white; border:none; border-radius:8px; font-weight:700;">ADMIN LOGIN</button>
+        </div>
+    </div>
+
+    <div id="app-content">
+        <div class="header">
+            <b style="letter-spacing:1px;">URBAN CASA</b>
+            <div style="display:flex; align-items:center; gap:10px;">
+                <span id="userDisplay" style="font-size:11px; font-weight:700;"></span>
+                <button onclick="location.reload()" style="background:none; border:1px solid rgba(255,255,255,0.3); color:white; border-radius:4px; font-size:10px; padding:4px 8px;">LOGOUT</button>
+            </div>
+        </div>
+
+        <div class="stats">
+            <div class="stat-card"><div id="stat-amt" style="font-weight:800;">₹0</div><div style="font-size:8px; opacity:0.7; margin-top:2px;">COLLECTION</div></div>
+            <div class="stat-card"><div id="stat-del" style="font-weight:800; color:#10b981;">0</div><div style="font-size:8px; opacity:0.7; margin-top:2px;">DELIVERED</div></div>
+            <div class="stat-card" id="qc-box"><div id="stat-qc" style="font-weight:800;">0</div><div style="font-size:8px; opacity:0.7; margin-top:2px;">NEW QC</div></div>
+        </div>
+
+        <div class="search-container">
+            <input type="text" id="searchInput" placeholder="🔍 Search Name, Bill, or Area..." onkeyup="renderCards()">
+        </div>
+
+        <div class="filter-chips" id="filterContainer">
+            <div class="chip active" onclick="setFilter('ALL', this)">ALL <span id="c-all"></span></div>
+            <div class="chip" onclick="setFilter('TODAY', this)">TODAY <span id="c-today"></span></div>
+            <div class="chip" onclick="setFilter('NEW', this)">NEW <span id="c-new"></span></div>
+            <div class="chip" onclick="setFilter('PENDING', this)">PENDING <span id="c-pen"></span></div>
+            <div class="chip" onclick="setFilter('DELIVERED', this)">DONE <span id="c-done"></span></div>
+        </div>
+
+        <div class="container" id="card-list"></div>
+    </div>
+
+    <script>
+        const firebaseConfig = { databaseURL: "https://new-dispatch-approval-default-rtdb.firebaseio.com/" };
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.database();
+        const recordsRef = db.ref('dispatch_records');
+        const passRef = db.ref('settings/passwords');
+
+        let currentUser = '', globalData = [], currentFilter = 'ALL', lastCount = 0;
+        let activePasswords = { 'Admin': 'admin123', 'Suman (Supervisor)': 'suman2024' };
+
+        if ('serviceWorker' in navigator) { navigator.serviceWorker.register('sw.js'); }
+        passRef.on('value', snap => { if(snap.exists()) activePasswords = {...activePasswords, ...snap.val()}; });
+
+        function login(role) {
+            const input = document.getElementById('passField').value;
+            if (input !== activePasswords[role]) return alert("Invalid Password");
+            if ("Notification" in window) Notification.requestPermission();
+            currentUser = role;
+            document.getElementById('userDisplay').innerText = role.split(' ')[0].toUpperCase();
+            document.getElementById('login-overlay').style.display = 'none';
+            document.getElementById('app-content').style.display = 'flex';
+            loadData();
+        }
+
+        function loadData() {
+            recordsRef.on('value', snap => {
+                const data = snap.val() || {};
+                const list = Object.keys(data).map(k => {
+                    if(!data[k].billDate) recordsRef.child(k).update({ billDate: new Date().toISOString().split('T')[0] });
+                    return {...data[k], id: k};
+                }).reverse();
+                
+                if (lastCount !== 0 && list.length > lastCount) {
+                    if (navigator.vibrate) navigator.vibrate([200, 100, 200]);
+                    if (Notification.permission === "granted") new Notification("URBAN CASA", { body: "New Entry Added" });
+                }
+                lastCount = list.length;
+                globalData = list;
+                updateStats();
+                renderCards();
+            });
+        }
+
+        function setFilter(type, el) {
+            currentFilter = type;
+            document.querySelectorAll('.chip').forEach(c => c.classList.remove('active'));
+            el.classList.add('active');
+            renderCards();
+        }
+
+        function updateStats() {
+            let s = { amt: 0, del: 0, qc: 0, all: 0, today: 0, n: 0, p: 0, d: 0 };
+            const t0 = new Date().toISOString().split('T')[0];
+
+            globalData.forEach(i => {
+                const isD = i.statusText === 'DELIVERED';
+                if(isD) { s.d++; s.del++; } 
+                else {
+                    s.all++;
+                    if(i.date === t0) s.today++;
+                    if(i.statusText === 'NEW') { s.n++; s.qc++; }
+                    if(i.statusText === 'PENDING') s.p++;
+                }
+                if(i.payPending === 'YES' && !i.payReceived) s.amt += parseFloat(i.payAmount || 0);
+            });
+
+            const amtEl = document.getElementById('stat-amt');
+            amtEl.innerText = '₹' + s.amt.toLocaleString();
+            s.amt > 0 ? amtEl.classList.add('stat-money-blink') : amtEl.classList.remove('stat-money-blink');
+
+            const qcBox = document.getElementById('qc-box');
+            document.getElementById('stat-qc').innerText = s.qc;
+            s.qc > 0 ? qcBox.classList.add('stat-qc-blink') : qcBox.classList.remove('stat-qc-blink');
+
+            document.getElementById('stat-del').innerText = s.del;
+            document.getElementById('c-all').innerText = `(${s.all})`;
+            document.getElementById('c-today').innerText = `(${s.today})`;
+            document.getElementById('c-new').innerText = `(${s.n})`;
+            document.getElementById('c-pen').innerText = `(${s.p})`;
+            document.getElementById('c-done').innerText = `(${s.d})`;
+        }
+
+        function renderCards() {
+            const list = document.getElementById('card-list');
+            const search = document.getElementById('searchInput').value.toLowerCase();
+            const t0 = new Date().toISOString().split('T')[0];
+            list.innerHTML = '';
+
+            globalData.forEach(item => {
+                let show = false;
+                const isD = item.statusText === 'DELIVERED';
+
+                if(currentFilter === 'ALL' && !isD) show = true;
+                else if(currentFilter === 'DELIVERED' && isD) show = true;
+                else if(currentFilter === 'TODAY' && item.date === t0 && !isD) show = true;
+                else if(item.statusText === currentFilter && !isD) show = true;
+
+                if(!show) return;
+
+                if(search) {
+                    const m = (item.name||'').toLowerCase().includes(search) || (item.loc||'').toLowerCase().includes(search) || (item.billNo||'').toLowerCase().includes(search);
+                    if(!m) return;
+                }
+
+                const card = document.createElement('div');
+                card.className = `mobile-card ${item.approved && !isD ? 'card-approved' : ''}`;
+                
+                card.innerHTML = `
+                    <div style="display:flex; justify-content:space-between; align-items:center;">
+                        <b style="font-size:15px;">${item.name}</b>
+                        <span class="${item.statusText==='NEW'?'card-badge-blink':''}" style="font-size:10px; background:#f1f5f9; padding:4px 8px; border-radius:4px;">${item.statusText}</span>
+                    </div>
+                    <div style="font-size:11px; color:gray; margin:6px 0;">Bill: ${item.billNo || 'NA'} | Area: ${item.loc || 'NA'}</div>
+                    <div style="background:#f8fafc; padding:10px; border-radius:8px; border:1px solid #e2e8f0; margin-bottom:10px; display:flex; justify-content:space-between; align-items:center;">
+                        ${item.payPending === 'YES' && !item.payReceived ? 
+                            `<div class="card-pay-blink">⚠️ COLLECT: ₹${item.payAmount}</div>
+                             ${currentUser === 'Admin' ? `<button onclick="recordsRef.child('${item.id}').update({payReceived:true})" style="background:#ef4444; color:white; border:none; padding:6px 10px; border-radius:6px; font-size:10px; font-weight:800; cursor:pointer;">MARK PAID</button>` : ''}` 
+                            : `<div style="color:var(--success); font-weight:700;">✅ PAID</div>`}
+                    </div>
+                    <div style="display:flex; gap:8px;">${getActionBtn(item)}</div>
+                `;
+                list.appendChild(card);
+            });
+        }
+
+        function getActionBtn(i) {
+            let btns = '';
+            if (currentUser === 'Admin') btns += `<button onclick="recordsRef.child('${i.id}').update({approved:!${i.approved}})" style="flex:1; padding:12px; background:var(--dark); color:white; border:none; border-radius:8px; font-weight:700;">${i.approved?'REVOKE':'APPROVE'}</button>`;
+            const margin = currentUser === 'Admin' ? '8px' : '0px';
+
+            if (i.statusText === 'NEW') btns += `<button onclick="recordsRef.child('${i.id}').update({statusText:'PENDING'})" style="flex:1; padding:12px; background:var(--accent); color:white; border:none; border-radius:8px; font-weight:700; margin-left:${margin};">QC DONE</button>`;
+            else if (i.statusText === 'PENDING' && !i.approved) btns += currentUser !== 'Admin' ? `<div style="flex:1; text-align:center; color:gray; padding:12px; border:1px dashed #ccc; border-radius:8px; font-size:11px;">WAITING APPROVAL</div>` : '';
+            else if (i.approved && i.statusText !== 'DELIVERED') btns += `<button onclick="dispatch('${i.id}')" style="flex:1; padding:12px; background:#25d366; color:white; border:none; border-radius:8px; font-weight:700; margin-left:${margin};">DISPATCH</button>`;
+            else if (i.statusText === 'DELIVERED') btns += `<div style="flex:1; text-align:center; color:var(--success); font-weight:800; padding:12px;">DELIVERED</div>`;
+            return btns;
+        }
+
+        function dispatch(id) {
+            const item = globalData.find(i => i.id === id);
+            
+            // Format dates
+            const dDate = new Date().toLocaleDateString('en-GB'); 
+            const bDateRaw = item.billDate || new Date().toISOString().split('T')[0];
+            const bDate = bDateRaw.split('-').reverse().join('/');
+            
+            const pay = (item.payPending === 'YES' && !item.payReceived) ? '₹' + item.payAmount : 'PAID';
+
+            // EXACT FORMAT & EMOJIS
+            const msg = `URBAN CASA DISPATCH\n` +
+                        `------------------------------------------\n` +
+                        `📅Dispatch Date: ${dDate}\n\n` +
+                        `📅Bill Date: ${bDate}\n\n` +
+                        `🧾Bill No: ${item.billNo || 'N/A'}\n\n` +
+                        `👤Customer: ${item.name || 'N/A'}\n\n` +
+                        `👤Sales Executive: ${item.exec || 'N/A'}\n\n` +
+                        `📍Location: ${item.loc || 'N/A'}\n\n` +
+                        `📒Qty: ${item.qty || '1'}\n\n` +
+                        `💰Payment Due: ${pay}\n\n` +
+                        `✅QC Checked By: Suman\n` +
+                        `------------------------------------------\n` +
+                        `🚚Status: Dispatched`;
+            
+            recordsRef.child(id).update({statusText:'DELIVERED'});
+            window.open(`https://wa.me/?text=${encodeURIComponent(msg)}`, '_blank');
+        }
+    </script>
+</body>
+</html>

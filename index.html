@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Urban Casa | Mobile Portal (Secure)</title>
+    <title>Urban Casa | Mobile Portal</title>
     
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
@@ -15,13 +15,10 @@
         /* --- BLINKING LOGIC --- */
         @keyframes pulse-money-stat { 0%, 100% { color: #ef4444; transform: scale(1); } 50% { color: #ffffff; transform: scale(1.1); text-shadow: 0 0 10px rgba(239,68,68,0.8); } }
         .stat-money-blink { animation: pulse-money-stat 1s infinite; display: inline-block; font-weight: 900; }
-
         @keyframes flash-qc-box { 0%, 100% { background-color: #dc2626; color: white; } 50% { background-color: rgba(255,255,255,0.1); color: #dc2626; } }
         .stat-qc-blink { animation: flash-qc-box 0.6s infinite !important; border: 1px solid #dc2626 !important; border-radius: 8px;}
-
         @keyframes alert-badge { 0%, 100% { background: #dc2626; color: white; border-color: #dc2626; } 50% { background: transparent; color: #dc2626; border-color: transparent; } }
         .card-badge-blink { animation: alert-badge 0.5s infinite; border-radius: 4px; padding: 4px 8px; font-weight: 900; border: 1px solid transparent; }
-
         @keyframes alert-text { 0%, 100% { opacity: 1; color: #dc2626; } 50% { opacity: 0.3; color: #000; } }
         .card-pay-blink { animation: alert-text 0.8s infinite; font-weight: 900; font-size: 13px; }
 
@@ -54,8 +51,9 @@
         .mobile-card { background: white; border-radius: 12px; padding: 15px; margin-bottom: 12px; border: 1px solid #e2e8f0; position: relative; }
         .card-approved { border-left: 5px solid var(--success); background: #f0fdf4; }
 
-        /* COMPLAINTS FORM */
-        .c-input { width: 100%; padding: 10px; border: 1px solid #e2e8f0; border-radius: 6px; box-sizing: border-box; margin-bottom: 8px; outline: none; font-family: 'Inter'; }
+        /* FORMS */
+        .c-input { width: 100%; padding: 10px; border: 1px solid #e2e8f0; border-radius: 6px; box-sizing: border-box; margin-bottom: 8px; outline: none; font-family: 'Inter'; font-weight:600;}
+        .c-input:focus { border-color: var(--accent); }
         .comp-pill { padding: 4px 8px; border-radius: 4px; font-size: 10px; font-weight: 800; cursor: pointer; text-align: center; }
         .comp-new { background: #fee2e2; color: #dc2626; border: 1px solid #fecaca; }
         .comp-prog { background: #fef3c7; color: #d97706; border: 1px solid #fde68a; }
@@ -67,7 +65,7 @@
     <div id="login-overlay">
         <div class="login-box">
             <h2 style="color:var(--accent); margin-top:0; margin-bottom:5px;">URBAN CASA</h2>
-            <p style="font-size:10px; color:gray; font-weight:700; margin-top:0; margin-bottom:20px;">SECURE LOGIN</p>
+            <p style="font-size:10px; color:gray; font-weight:700; margin-top:0; margin-bottom:20px;">STAFF PORTAL</p>
             <input type="password" id="passField" class="pass-input" placeholder="••••">
             
             <button onclick="login('Suman (Supervisor)')" style="width:100%; padding:14px; background:var(--success); color:white; border:none; border-radius:8px; font-weight:700; margin-bottom:10px; cursor:pointer;">SUMAN LOGIN</button>
@@ -95,6 +93,25 @@
         </div>
 
         <div id="dispatch-view" style="display:flex; flex-direction:column; flex:1; overflow:hidden;">
+            
+            <div id="dispatch-form-container" style="background:white; padding:15px; border-bottom: 1px solid #e2e8f0; flex-shrink:0;">
+                <b style="color:var(--accent); font-size:13px;">+ New Dispatch Entry</b>
+                <div style="margin-top:10px; display:grid; grid-template-columns: 1fr 1fr; gap:8px;">
+                    <input type="text" id="d-name" class="c-input" placeholder="Customer Name" style="grid-column: span 2; margin-bottom:0;">
+                    <input type="text" id="d-phone" class="c-input" placeholder="Mobile" style="margin-bottom:0;">
+                    <input type="text" id="d-bill" class="c-input" placeholder="Bill No" style="margin-bottom:0;">
+                    <input type="text" id="d-exec" class="c-input" placeholder="Executive" style="margin-bottom:0;">
+                    <input type="text" id="d-loc" class="c-input" placeholder="Area" style="margin-bottom:0;">
+                    <input type="number" id="d-qty" class="c-input" placeholder="Qty" value="1" style="margin-bottom:0;">
+                    <select id="d-payType" class="c-input" style="margin-bottom:0;" onchange="document.getElementById('d-payAmt').style.display = this.value==='YES' ? 'block' : 'none'">
+                        <option value="NO">Pay: NO</option>
+                        <option value="YES">Pay: YES</option>
+                    </select>
+                    <input type="number" id="d-payAmt" class="c-input" placeholder="₹ Collect Amount" style="display:none; grid-column: span 2; margin-bottom:0;">
+                    <button onclick="submitDispatch()" style="grid-column: span 2; background:var(--accent); color:white; border:none; padding:12px; border-radius:6px; font-weight:800; cursor:pointer; margin-top:4px;">ADD ENTRY</button>
+                </div>
+            </div>
+
             <div class="stats">
                 <div class="stat-card"><div id="stat-amt" style="font-weight:800;">₹0</div><div style="font-size:8px; opacity:0.7; margin-top:2px;">COLLECTION</div></div>
                 <div class="stat-card"><div id="stat-del" style="font-weight:800; color:#10b981;">0</div><div style="font-size:8px; opacity:0.7; margin-top:2px;">DELIVERED</div></div>
@@ -118,7 +135,6 @@
         </div>
 
         <div id="complaints-view" style="display:none; flex-direction:column; flex:1; overflow:hidden; background:var(--bg);">
-            
             <div style="background:white; padding:15px; border-bottom: 1px solid #e2e8f0; flex-shrink:0;">
                 <b style="color:var(--danger); font-size:13px;">+ Log New Complaint</b>
                 <div style="margin-top:10px;">
@@ -131,7 +147,6 @@
                     <button onclick="submitComplaint()" style="width:100%; background:var(--danger); color:white; border:none; padding:12px; border-radius:6px; font-weight:800; cursor:pointer;">SUBMIT</button>
                 </div>
             </div>
-
             <div class="container" id="complaint-list"></div>
         </div>
 
@@ -143,42 +158,46 @@
         const db = firebase.database();
         const recordsRef = db.ref('dispatch_records');
         const compRef = db.ref('complaints_records');
+        
+        // Reverted to plain-text passwords node
         const passRef = db.ref('settings/passwords');
 
         let currentUser = '', globalData = [], globalComplaints = [], currentFilter = 'ALL', lastCount = 0;
         
-        // These are the SHA-256 Hashed versions of your passwords
+        // Plain text passwords as requested
         let activePasswords = { 
-            'Admin': '240be518fabd2724ddb6f04eeb1da5967448d7e831c08c8fa822809f74c720a9', // admin123
-            'Suman (Supervisor)': '3a1b55979bb8d1abef00e5de172e258a43f8e5d0a6c56db3221e06d95f4fbfe1', // suman2024
-            'Arjun': 'a5e4251ba145025dcd10860361250325d77dc47ee27f422eb73f15c7e1488c03', // arjun123
-            'Riyaz': 'fd4f1642c676770ba0ab933f7ccb68ccf1ddab4c1fbca690b23267c7426367ec'  // riyaz123
+            'Admin': 'admin123',
+            'Suman (Supervisor)': 'suman2024',
+            'Arjun': 'arjun123',
+            'Riyaz': 'riyaz123'
         };
 
         if ('serviceWorker' in navigator) { navigator.serviceWorker.register('sw.js'); }
-        
-        // Load dynamically from Firebase if they exist (NOTE: Firebase MUST contain hashes now, not plain text)
         passRef.on('value', snap => { if(snap.exists()) activePasswords = {...activePasswords, ...snap.val()}; });
 
-        // --- SECURITY HASHING LOGIC ---
-        async function hashString(str) {
-            const buffer = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(str));
-            return Array.from(new Uint8Array(buffer)).map(b => b.toString(16).padStart(2, '0')).join('');
+        function getLocalDate() {
+            const d = new Date();
+            d.setMinutes(d.getMinutes() - d.getTimezoneOffset());
+            return d.toISOString().split('T')[0];
         }
 
-        // --- ASYNC LOGIN ---
-        async function login(role) {
+        function login(role) {
             const passInput = document.getElementById('passField');
-            const hashedInput = await hashString(passInput.value);
             
-            if (hashedInput !== activePasswords[role]) {
-                passInput.value = ''; // Clear the box on failure
+            // Plain text comparison
+            if (passInput.value !== activePasswords[role]) {
+                passInput.value = ''; 
                 return alert("Invalid Password");
             }
             
             if ("Notification" in window) Notification.requestPermission();
             currentUser = role;
             document.getElementById('userDisplay').innerText = role.split(' ')[0].toUpperCase();
+            
+            if (['Arjun', 'Riyaz'].includes(role)) {
+                document.getElementById('dispatch-form-container').style.display = 'none';
+            }
+
             document.getElementById('login-overlay').style.display = 'none';
             document.getElementById('app-content').style.display = 'flex';
             
@@ -186,11 +205,9 @@
             loadComplaints();
         }
 
-        // --- TAB SWITCHING ---
         function switchView(view) {
             document.getElementById('tab-disp').classList.remove('active');
             document.getElementById('tab-comp').classList.remove('active');
-            
             if(view === 'dispatch') {
                 document.getElementById('tab-disp').classList.add('active');
                 document.getElementById('dispatch-view').style.display = 'flex';
@@ -203,11 +220,38 @@
         }
 
         // ================= DISPATCH LOGIC =================
+        function submitDispatch() {
+            const n = document.getElementById('d-name').value;
+            if(!n) return alert("Customer Name is required");
+            const isPay = document.getElementById('d-payType').value;
+            
+            recordsRef.push({
+                name: n.toUpperCase(),
+                phone: document.getElementById('d-phone').value,
+                billNo: document.getElementById('d-bill').value,
+                exec: document.getElementById('d-exec').value.toUpperCase(),
+                loc: document.getElementById('d-loc').value.toUpperCase(),
+                qty: document.getElementById('d-qty').value || '1',
+                date: getLocalDate(),
+                statusText: 'NEW',
+                approved: false,
+                payPending: isPay,
+                payReceived: false,
+                payAmount: isPay === 'YES' ? (Number(document.getElementById('d-payAmt').value) || 0) : 0
+            });
+
+            ['d-name', 'd-phone', 'd-bill', 'd-exec', 'd-loc', 'd-payAmt'].forEach(id => document.getElementById(id).value = '');
+            document.getElementById('d-qty').value = '1';
+            document.getElementById('d-payType').value = 'NO';
+            document.getElementById('d-payAmt').style.display = 'none';
+            alert("Entry Added!");
+        }
+
         function loadData() {
             recordsRef.on('value', snap => {
                 const data = snap.val() || {};
                 const list = Object.keys(data).map(k => {
-                    if(!data[k].billDate) recordsRef.child(k).update({ billDate: new Date().toISOString().split('T')[0] });
+                    if(!data[k].billDate) recordsRef.child(k).update({ billDate: getLocalDate() });
                     return {...data[k], id: k};
                 }).reverse();
                 
@@ -231,7 +275,7 @@
 
         function updateStats() {
             let s = { amt: 0, del: 0, qc: 0, all: 0, today: 0, tom: 0, n: 0, p: 0, d: 0 };
-            const t0 = new Date().toISOString().split('T')[0];
+            const t0 = getLocalDate();
             const tmrw = new Date(); tmrw.setDate(tmrw.getDate() + 1);
             const t1 = tmrw.toISOString().split('T')[0];
 
@@ -268,7 +312,7 @@
         function renderCards() {
             const list = document.getElementById('card-list');
             const search = document.getElementById('searchInput').value.toLowerCase();
-            const t0 = new Date().toISOString().split('T')[0];
+            const t0 = getLocalDate();
             const tmrw = new Date(); tmrw.setDate(tmrw.getDate() + 1);
             const t1 = tmrw.toISOString().split('T')[0];
 
@@ -285,22 +329,23 @@
                 else if(item.statusText === currentFilter && !isD) show = true;
 
                 if(!show) return;
-
                 if(search) {
-                    const m = (item.name||'').toLowerCase().includes(search) || 
-                              (item.loc||'').toLowerCase().includes(search) || 
-                              (item.billNo||'').toLowerCase().includes(search) || 
-                              (item.exec||'').toLowerCase().includes(search);
+                    const m = (item.name||'').toLowerCase().includes(search) || (item.loc||'').toLowerCase().includes(search) || (item.billNo||'').toLowerCase().includes(search) || (item.exec||'').toLowerCase().includes(search);
                     if(!m) return;
                 }
+
+                const deleteBtn = currentUser === 'Admin' ? `<div onclick="if(confirm('Delete this record?')) recordsRef.child('${item.id}').remove()" style="color:var(--danger); font-size:14px; cursor:pointer; padding: 4px;">🗑️</div>` : '';
 
                 const card = document.createElement('div');
                 card.className = `mobile-card ${item.approved && !isD ? 'card-approved' : ''}`;
                 
                 card.innerHTML = `
-                    <div style="display:flex; justify-content:space-between; align-items:center;">
-                        <b style="font-size:15px;">${item.name}</b>
-                        <span class="${item.statusText==='NEW'?'card-badge-blink':''}" style="font-size:10px; background:#f1f5f9; padding:4px 8px; border-radius:4px;">${item.statusText}</span>
+                    <div style="display:flex; justify-content:space-between; align-items:flex-start;">
+                        <div>
+                            <b style="font-size:15px;">${item.name}</b>
+                            <span class="${item.statusText==='NEW'?'card-badge-blink':''}" style="font-size:10px; background:#f1f5f9; padding:4px 8px; border-radius:4px; margin-left:6px;">${item.statusText}</span>
+                        </div>
+                        ${deleteBtn}
                     </div>
                     <div style="font-size:11px; color:gray; margin:8px 0; display:flex; justify-content:space-between; align-items:center;">
                         <div style="line-height: 1.6;">
@@ -325,15 +370,13 @@
 
         function getActionBtn(i) {
             let btns = '';
-            
-            // Only the main Admin can approve now.
             const canApprove = currentUser === 'Admin';
 
             if (canApprove) btns += `<button onclick="recordsRef.child('${i.id}').update({approved:!${i.approved}})" style="flex:1; padding:12px; background:var(--dark); color:white; border:none; border-radius:8px; font-weight:700; cursor:pointer;">${i.approved?'REVOKE':'APPROVE'}</button>`;
             
             const margin = canApprove ? '8px' : '0px';
 
-            if (i.statusText === 'NEW') btns += `<button onclick="recordsRef.child('${i.id}').update({statusText:'PENDING'})" style="flex:1; padding:12px; background:var(--accent); color:white; border:none; border-radius:8px; font-weight:700; cursor:pointer; margin-left:${margin};">QC DONE</button>`;
+            if (i.statusText === 'NEW' && currentUser !== 'Arjun' && currentUser !== 'Riyaz') btns += `<button onclick="recordsRef.child('${i.id}').update({statusText:'PENDING'})" style="flex:1; padding:12px; background:var(--accent); color:white; border:none; border-radius:8px; font-weight:700; cursor:pointer; margin-left:${margin};">QC DONE</button>`;
             else if (i.statusText === 'PENDING' && !i.approved) btns += !canApprove ? `<div style="flex:1; text-align:center; color:gray; padding:12px; border:1px dashed #ccc; border-radius:8px; font-size:11px; margin-left:${margin};">WAITING APPROVAL</div>` : '';
             else if (i.approved && i.statusText !== 'DELIVERED') btns += `<button onclick="dispatch('${i.id}')" style="flex:1; padding:12px; background:#25d366; color:white; border:none; border-radius:8px; font-weight:700; cursor:pointer; margin-left:${margin};">DISPATCH</button>`;
             else if (i.statusText === 'DELIVERED') btns += `<div style="flex:1; text-align:center; color:var(--success); font-weight:800; padding:12px; margin-left:${margin};">DELIVERED</div>`;
@@ -343,7 +386,7 @@
         function dispatch(id) {
             const item = globalData.find(i => i.id === id);
             const dDate = new Date().toLocaleDateString('en-GB'); 
-            const bDateRaw = item.billDate || new Date().toISOString().split('T')[0];
+            const bDateRaw = item.billDate || getLocalDate();
             const bDate = bDateRaw.split('-').reverse().join('/');
             const pay = (item.payPending === 'YES' && !item.payReceived) ? '₹' + item.payAmount : 'PAID';
             const qcName = currentUser.split(' ')[0]; 
@@ -377,12 +420,17 @@
                 if(item.statusText === 'IN PROGRESS') sClass = 'comp-prog';
                 if(item.statusText === 'RESOLVED') sClass = 'comp-res';
 
+                const deleteBtn = currentUser === 'Admin' ? `<div onclick="if(confirm('Delete Complaint?')) compRef.child('${item.id}').remove()" style="color:var(--danger); font-size:14px; cursor:pointer; padding: 4px;">🗑️</div>` : '';
+
                 const card = document.createElement('div');
                 card.className = 'mobile-card';
                 card.innerHTML = `
-                    <div style="display:flex; justify-content:space-between; align-items:center;">
+                    <div style="display:flex; justify-content:space-between; align-items:flex-start;">
                         <b style="font-size:14px; color:var(--dark);">${item.name}</b>
-                        <div class="comp-pill ${sClass}" onclick="cycleCompStatus('${item.id}', '${item.statusText || 'NEW'}')">${item.statusText || 'NEW'}</div>
+                        <div style="display:flex; align-items:center; gap:8px;">
+                            <div class="comp-pill ${sClass}" onclick="cycleCompStatus('${item.id}', '${item.statusText || 'NEW'}')">${item.statusText || 'NEW'}</div>
+                            ${deleteBtn}
+                        </div>
                     </div>
                     <div style="font-size:11px; color:gray; margin-top:8px; line-height:1.6;">
                         <a href="https://wa.me/91${item.phone}" style="color:var(--accent); text-decoration:none; font-weight:700;" target="_blank">📱 ${item.phone || 'N/A'}</a> | 📍 ${item.loc || 'N/A'} <br>
@@ -404,11 +452,10 @@
                 phone: document.getElementById('c-phone').value,
                 loc: document.getElementById('c-loc').value.toUpperCase(),
                 details: document.getElementById('c-det').value,
-                date: new Date().toISOString().split('T')[0],
+                date: getLocalDate(),
                 statusText: 'NEW'
             });
 
-            // Clear form
             ['c-name', 'c-phone', 'c-loc', 'c-det'].forEach(id => document.getElementById(id).value = '');
             alert("Complaint Logged Successfully!");
         }

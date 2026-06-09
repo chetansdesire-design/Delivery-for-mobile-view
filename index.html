@@ -30,6 +30,8 @@
         
         #app-content { display: none; height: 100vh; flex-direction: column; }
         .header { padding: 15px; background: var(--dark); color: white; display: flex; justify-content: space-between; align-items: center; }
+        .header-btns { display: flex; align-items: center; gap: 8px; }
+        .icon-btn { background: rgba(255,255,255,0.2); border: 1px solid rgba(255,255,255,0.3); color: white; border-radius: 4px; font-size: 12px; padding: 4px 8px; cursor: pointer; }
         
         /* TABS */
         .tabs { display: flex; background: white; border-bottom: 1px solid #e2e8f0; }
@@ -37,7 +39,7 @@
         .tab.active { color: var(--accent); border-bottom: 3px solid var(--accent); }
         .comp-badge { background: var(--danger); color: white; border-radius: 10px; padding: 2px 6px; font-size: 9px; margin-left: 4px; }
 
-        .stats { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; padding: 10px; background: #0f172a; color: white; text-align: center; }
+        .stats { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; padding: 10px; background: #0f172a; color: white; text-align: center; transition: all 0.3s;}
         .stat-card { background: rgba(255,255,255,0.1); padding: 8px; border-radius: 8px; font-size: 12px; transition: all 0.3s ease; }
         
         .search-container { padding: 10px; background: white; border-bottom: 1px solid #e2e8f0; }
@@ -54,18 +56,20 @@
         /* FORMS */
         .c-input { width: 100%; padding: 10px; border: 1px solid #e2e8f0; border-radius: 6px; box-sizing: border-box; margin-bottom: 8px; outline: none; font-family: 'Inter'; font-weight:600;}
         .c-input:focus { border-color: var(--accent); }
+        .c-input:disabled { background: #f1f5f9; color: #94a3b8; cursor: not-allowed; }
+        
         .comp-pill { padding: 4px 8px; border-radius: 4px; font-size: 10px; font-weight: 800; cursor: pointer; text-align: center; }
         .comp-new { background: #fee2e2; color: #dc2626; border: 1px solid #fecaca; }
         .comp-prog { background: #fef3c7; color: #d97706; border: 1px solid #fde68a; }
         .comp-res { background: #dcfce7; color: #166534; border: 1px solid #bbf7d0; }
 
-        /* SETTINGS MODAL */
+        /* MODALS */
         .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.6); z-index: 10000; display: none; align-items: center; justify-content: center; backdrop-filter: blur(3px); }
         .modal-box { background: white; width: 90%; max-width: 350px; border-radius: 12px; padding: 20px; box-sizing: border-box; display: flex; flex-direction: column; max-height: 85vh; }
         .modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; }
         .user-row { display: flex; justify-content: space-between; align-items: center; padding: 10px; border-bottom: 1px solid #e2e8f0; }
         .user-row:last-child { border-bottom: none; }
-        #settings-user-list { flex: 1; overflow-y: auto; border: 1px solid #e2e8f0; border-radius: 8px; background: #fff; }
+        .scroll-list { flex: 1; overflow-y: auto; border: 1px solid #e2e8f0; border-radius: 8px; background: #fff; }
     </style>
 </head>
 <body>
@@ -82,11 +86,46 @@
                 <b style="font-size:12px; color:var(--accent); display:block; margin-bottom:8px;">Add / Edit User</b>
                 <input type="text" id="su-name" class="c-input" placeholder="Username (e.g. Rahul)">
                 <input type="text" id="su-pass" class="c-input" placeholder="Password">
-                <button onclick="saveUser()" style="width:100%; background:var(--accent); color:white; border:none; padding:10px; border-radius:6px; font-weight:bold; cursor:pointer; margin-top:5px;">SAVE USER</button>
+                
+                <div style="display:grid; grid-template-columns: 1fr 1fr; gap:8px; margin-top:10px; font-size:11px; color:var(--dark); font-weight:700;">
+                    <label><input type="checkbox" id="perm-add" checked> Add Entries</label>
+                    <label><input type="checkbox" id="perm-approve"> Approve QC</label>
+                    <label><input type="checkbox" id="perm-delete"> Delete Data</label>
+                    <label><input type="checkbox" id="perm-admin"> Admin Access</label>
+                    <label><input type="checkbox" id="perm-complaints" checked> Complaints</label>
+                    <label><input type="checkbox" id="perm-amounts"> View Amounts</label>
+                </div>
+
+                <button onclick="saveUser()" style="width:100%; background:var(--accent); color:white; border:none; padding:10px; border-radius:6px; font-weight:bold; cursor:pointer; margin-top:12px;">SAVE USER</button>
             </div>
 
             <b style="font-size:12px; color:var(--dark); display:block; margin-bottom:8px;">Current Users</b>
-            <div id="settings-user-list"></div>
+            <div id="settings-user-list" class="scroll-list"></div>
+        </div>
+    </div>
+
+    <!-- EDIT DISPATCH MODAL -->
+    <div id="edit-modal" class="modal-overlay">
+        <div class="modal-box">
+            <div class="modal-header">
+                <h3 style="margin:0; color:var(--dark);">✏️ Edit Dispatch</h3>
+                <button onclick="closeEditModal()" style="background:none; border:none; font-size:20px; cursor:pointer; color:var(--danger); font-weight:bold;">✖</button>
+            </div>
+            <div style="overflow-y: auto; padding-right:5px; margin-bottom:10px;">
+                <input type="hidden" id="e-id">
+                <input type="text" id="e-name" class="c-input" placeholder="Customer Name">
+                <input type="text" id="e-phone" class="c-input" placeholder="Mobile">
+                <input type="text" id="e-bill" class="c-input" placeholder="Bill No">
+                <input type="text" id="e-exec" class="c-input" placeholder="Executive">
+                <input type="text" id="e-loc" class="c-input" placeholder="Area">
+                <input type="number" id="e-qty" class="c-input" placeholder="Qty">
+                <select id="e-payType" class="c-input" onchange="document.getElementById('e-payAmt').style.display = (this.value==='YES' && activePasswords[currentUser].perms.amounts) ? 'block' : 'none'">
+                    <option value="NO">Pay: NO</option>
+                    <option value="YES">Pay: YES</option>
+                </select>
+                <input type="number" id="e-payAmt" class="c-input" placeholder="₹ Collect Amount">
+            </div>
+            <button onclick="saveEditDispatch()" style="width:100%; background:var(--accent); color:white; border:none; padding:12px; border-radius:6px; font-weight:800; cursor:pointer;">UPDATE ENTRY</button>
         </div>
     </div>
 
@@ -97,7 +136,6 @@
             <p style="font-size:10px; color:gray; font-weight:700; margin-top:0; margin-bottom:20px;">STAFF PORTAL</p>
             <input type="password" id="passField" class="pass-input" placeholder="••••">
             
-            <!-- Dynamic Login Buttons Injected Here -->
             <div id="login-buttons-container" style="display:flex; flex-direction:column; gap:10px;">
                 <p style="font-size:12px; color:gray;">Loading users...</p>
             </div>
@@ -108,11 +146,11 @@
     <div id="app-content">
         <div class="header">
             <b style="letter-spacing:1px;">URBAN CASA</b>
-            <div style="display:flex; align-items:center; gap:10px;">
+            <div class="header-btns">
                 <span id="userDisplay" style="font-size:11px; font-weight:700;"></span>
-                <!-- SETTINGS BUTTON (Hidden by default, shown for Admin) -->
-                <button id="settingsBtn" onclick="openSettings()" style="display:none; background:rgba(255,255,255,0.2); border:1px solid rgba(255,255,255,0.3); color:white; border-radius:4px; font-size:12px; padding:4px 8px; cursor:pointer;" title="Settings">⚙️</button>
-                <button onclick="location.reload()" style="background:none; border:1px solid rgba(255,255,255,0.3); color:white; border-radius:4px; font-size:10px; padding:4px 8px; cursor:pointer;">LOGOUT</button>
+                <button id="exportBtn" onclick="exportToCSV()" class="icon-btn" style="display:none;" title="Export Data">📤</button>
+                <button id="settingsBtn" onclick="openSettings()" class="icon-btn" style="display:none;" title="Settings">⚙️</button>
+                <button onclick="logoutUser()" class="icon-btn" style="border-color:transparent;">LOGOUT</button>
             </div>
         </div>
 
@@ -124,32 +162,32 @@
         <!-- DISPATCH VIEW -->
         <div id="dispatch-view" style="display:flex; flex-direction:column; flex:1; overflow:hidden;">
             
-            <!-- Collapsible Form Header (Hidden if user is Satish) -->
             <div id="dispatch-form-container" style="background:white; padding:15px; border-bottom: 1px solid #e2e8f0; flex-shrink:0;">
                 <div style="display:flex; justify-content:space-between; align-items:center; cursor:pointer;" onclick="toggleDispatchForm()">
                     <b style="color:var(--accent); font-size:13px;">+ New Dispatch Entry</b>
                     <span id="d-form-icon" style="color:var(--accent); font-weight:bold; font-size:12px;">▼</span>
                 </div>
                 
-                <!-- Collapsible Form Body (Hidden by default) -->
                 <div id="d-form-body" style="display:none; margin-top:15px; grid-template-columns: 1fr 1fr; gap:8px;">
-                    <input type="text" id="d-name" class="c-input" placeholder="Customer Name" style="grid-column: span 2; margin-bottom:0;">
-                    <input type="text" id="d-phone" class="c-input" placeholder="Mobile" style="margin-bottom:0;">
+                    <input type="text" id="d-name" class="c-input" placeholder="Customer Name*" style="grid-column: span 2; margin-bottom:0;">
+                    <input type="text" id="d-phone" class="c-input" placeholder="Mobile*" style="margin-bottom:0;">
+                    <input type="text" id="d-loc" class="c-input" placeholder="Area*" style="margin-bottom:0;">
                     <input type="text" id="d-bill" class="c-input" placeholder="Bill No" style="margin-bottom:0;">
                     <input type="text" id="d-exec" class="c-input" placeholder="Executive" style="margin-bottom:0;">
-                    <input type="text" id="d-loc" class="c-input" placeholder="Area" style="margin-bottom:0;">
+                    
                     <input type="number" id="d-qty" class="c-input" placeholder="Qty" value="1" style="margin-bottom:0;">
-                    <select id="d-payType" class="c-input" style="margin-bottom:0;" onchange="document.getElementById('d-payAmt').style.display = this.value==='YES' ? 'block' : 'none'">
+                    <select id="d-payType" class="c-input" style="margin-bottom:0;" onchange="handlePayChange(this.value, 'd-payAmt')">
                         <option value="NO">Pay: NO</option>
                         <option value="YES">Pay: YES</option>
                     </select>
+                    
                     <input type="number" id="d-payAmt" class="c-input" placeholder="₹ Collect Amount" style="display:none; grid-column: span 2; margin-bottom:0;">
                     <button onclick="submitDispatch()" style="grid-column: span 2; background:var(--accent); color:white; border:none; padding:12px; border-radius:6px; font-weight:800; cursor:pointer; margin-top:4px;">ADD ENTRY</button>
                 </div>
             </div>
 
-            <div class="stats">
-                <div class="stat-card"><div id="stat-amt" style="font-weight:800;">₹0</div><div style="font-size:8px; opacity:0.7; margin-top:2px;">COLLECTION</div></div>
+            <div class="stats" id="stats-container">
+                <div class="stat-card" id="stat-card-amt"><div id="stat-amt" style="font-weight:800;">₹0</div><div style="font-size:8px; opacity:0.7; margin-top:2px;">COLLECTION</div></div>
                 <div class="stat-card"><div id="stat-del" style="font-weight:800; color:#10b981;">0</div><div style="font-size:8px; opacity:0.7; margin-top:2px;">DELIVERED</div></div>
                 <div class="stat-card" id="qc-box"><div id="stat-qc" style="font-weight:800;">0</div><div style="font-size:8px; opacity:0.7; margin-top:2px;">NEW QC</div></div>
             </div>
@@ -167,26 +205,23 @@
                 <div class="chip" onclick="setFilter('DELIVERED', this)">DONE <span id="c-done"></span></div>
             </div>
 
-            <!-- List Container has full height to scroll freely -->
             <div class="container" id="card-list"></div>
         </div>
 
         <!-- COMPLAINTS VIEW -->
         <div id="complaints-view" style="display:none; flex-direction:column; flex:1; overflow:hidden; background:var(--bg);">
             
-            <!-- Collapsible Form Header (Hidden if user is Satish) -->
             <div id="complaint-form-container" style="background:white; padding:15px; border-bottom: 1px solid #e2e8f0; flex-shrink:0;">
                 <div style="display:flex; justify-content:space-between; align-items:center; cursor:pointer;" onclick="toggleCompForm()">
                     <b style="color:var(--danger); font-size:13px;">+ Log New Complaint</b>
                     <span id="c-form-icon" style="color:var(--danger); font-weight:bold; font-size:12px;">▼</span>
                 </div>
                 
-                <!-- Collapsible Form Body (Hidden by default) -->
                 <div id="c-form-body" style="display:none; margin-top:15px;">
-                    <input type="text" id="c-name" class="c-input" placeholder="Customer Name">
+                    <input type="text" id="c-name" class="c-input" placeholder="Customer Name*">
                     <div style="display:flex; gap:8px;">
-                        <input type="text" id="c-phone" class="c-input" placeholder="Mobile No.">
-                        <input type="text" id="c-loc" class="c-input" placeholder="Area / Location">
+                        <input type="text" id="c-phone" class="c-input" placeholder="Mobile No.*">
+                        <input type="text" id="c-loc" class="c-input" placeholder="Area / Location*">
                     </div>
                     <input type="text" id="c-det" class="c-input" placeholder="Complaint Details...">
                     <button onclick="submitComplaint()" style="width:100%; background:var(--danger); color:white; border:none; padding:12px; border-radius:6px; font-weight:800; cursor:pointer;">SUBMIT</button>
@@ -202,28 +237,51 @@
         const firebaseConfig = { databaseURL: "https://new-dispatch-approval-default-rtdb.firebaseio.com/" };
         firebase.initializeApp(firebaseConfig);
         const db = firebase.database();
+        
+        // Limits initial fetch to 300 records to prevent browser crash
         const recordsRef = db.ref('dispatch_records');
-        const compRef = db.ref('complaints_records');
+        const queryRef = recordsRef.limitToLast(300); 
+        const compRef = db.ref('complaints_records').limitToLast(200);
         const passRef = db.ref('settings/passwords');
 
         let currentUser = '', globalData = [], globalComplaints = [], currentFilter = 'ALL', lastCount = 0;
-        
-        // Base users to inject if database is entirely empty
-        const defaultUsers = { 
-            'Admin': 'admin123',
-            'Suman (Supervisor)': 'suman2024',
-            'Arjun': 'arjun123',
-            'Riyaz': 'riyaz123',
-            'Satish': 'satish123'
-        };
         let activePasswords = {};
+        let autoLoginAttempted = false;
+
+        const defaultUsers = { 
+            'Admin': { pass: 'admin123', perms: { add: true, approve: true, delete: true, admin: true, complaints: true, amounts: true } },
+            'Suman (Supervisor)': { pass: 'suman2024', perms: { add: true, approve: true, delete: false, admin: false, complaints: true, amounts: false } },
+            'Arjun': { pass: 'arjun123', perms: { add: true, approve: false, delete: false, admin: false, complaints: true, amounts: false } },
+            'Riyaz': { pass: 'riyaz123', perms: { add: true, approve: false, delete: false, admin: false, complaints: true, amounts: false } },
+            'Satish': { pass: 'satish123', perms: { add: false, approve: false, delete: false, admin: false, complaints: false, amounts: false } }
+        };
 
         if ('serviceWorker' in navigator) { navigator.serviceWorker.register('sw.js'); }
         
-        // Listen to password node and render Dynamic Login Buttons
         passRef.on('value', snap => { 
             if(snap.exists()) {
-                activePasswords = snap.val();
+                const rawData = snap.val();
+                activePasswords = {};
+                
+                Object.keys(rawData).forEach(user => {
+                    if(typeof rawData[user] === 'string') {
+                        activePasswords[user] = {
+                            pass: rawData[user],
+                            perms: {
+                                add: !user.toLowerCase().includes('satish'),
+                                approve: user.toLowerCase() === 'admin',
+                                delete: user.toLowerCase() === 'admin',
+                                admin: user.toLowerCase() === 'admin',
+                                complaints: true,
+                                amounts: user.toLowerCase() === 'admin'
+                            }
+                        };
+                    } else {
+                        activePasswords[user] = rawData[user];
+                        if(activePasswords[user].perms.complaints === undefined) activePasswords[user].perms.complaints = true;
+                        if(activePasswords[user].perms.amounts === undefined) activePasswords[user].perms.amounts = activePasswords[user].perms.admin;
+                    }
+                });
             } else {
                 activePasswords = defaultUsers;
                 passRef.set(defaultUsers);
@@ -233,6 +291,15 @@
             if(document.getElementById('settings-modal').style.display === 'flex') {
                 renderSettingsUsers();
             }
+
+            // Session Auto-Login
+            if(!autoLoginAttempted) {
+                const savedUser = localStorage.getItem('urbanCasaUser');
+                if(savedUser && activePasswords[savedUser]) {
+                    login(savedUser, true);
+                }
+                autoLoginAttempted = true;
+            }
         });
 
         function renderLoginButtons() {
@@ -240,8 +307,8 @@
             container.innerHTML = '';
 
             Object.keys(activePasswords).forEach(user => {
-                let bgColor = '#475569'; // Default Gray
-                if(user.toLowerCase() === 'admin') bgColor = 'var(--dark)';
+                let bgColor = '#475569'; 
+                if(activePasswords[user].perms.admin) bgColor = 'var(--dark)';
                 else if(user.toLowerCase().includes('suman')) bgColor = 'var(--success)';
 
                 const btn = document.createElement('button');
@@ -253,58 +320,70 @@
             });
         }
 
+        function logoutUser() {
+            localStorage.removeItem('urbanCasaUser');
+            location.reload();
+        }
+
+        function handlePayChange(val, targetId) {
+            const perms = activePasswords[currentUser].perms;
+            document.getElementById(targetId).style.display = (val === 'YES' && perms.amounts) ? 'block' : 'none';
+        }
+
         // ================= COLLAPSIBLE FORMS =================
         function toggleDispatchForm() {
             const body = document.getElementById('d-form-body');
             const icon = document.getElementById('d-form-icon');
-            if(body.style.display === 'none') {
-                body.style.display = 'grid';
-                icon.innerText = '▲';
-            } else {
-                body.style.display = 'none';
-                icon.innerText = '▼';
-            }
+            if(body.style.display === 'none') { body.style.display = 'grid'; icon.innerText = '▲'; } 
+            else { body.style.display = 'none'; icon.innerText = '▼'; }
         }
 
         function toggleCompForm() {
             const body = document.getElementById('c-form-body');
             const icon = document.getElementById('c-form-icon');
-            if(body.style.display === 'none') {
-                body.style.display = 'block';
-                icon.innerText = '▲';
-            } else {
-                body.style.display = 'none';
-                icon.innerText = '▼';
-            }
+            if(body.style.display === 'none') { body.style.display = 'block'; icon.innerText = '▲'; } 
+            else { body.style.display = 'none'; icon.innerText = '▼'; }
         }
 
         // ================= SETTINGS / USER MANAGEMENT =================
-        function openSettings() {
-            document.getElementById('settings-modal').style.display = 'flex';
-            renderSettingsUsers();
-        }
-
+        function openSettings() { document.getElementById('settings-modal').style.display = 'flex'; renderSettingsUsers(); }
+        
         function closeSettings() {
             document.getElementById('settings-modal').style.display = 'none';
             document.getElementById('su-name').value = '';
+            document.getElementById('su-name').disabled = false; // Re-enable for new creation
             document.getElementById('su-pass').value = '';
+            document.getElementById('perm-add').checked = true;
+            document.getElementById('perm-approve').checked = false;
+            document.getElementById('perm-delete').checked = false;
+            document.getElementById('perm-admin').checked = false;
+            document.getElementById('perm-complaints').checked = true;
+            document.getElementById('perm-amounts').checked = false;
         }
 
         function renderSettingsUsers() {
             const list = document.getElementById('settings-user-list');
             list.innerHTML = '';
-            
             Object.keys(activePasswords).forEach(user => {
-                const pass = activePasswords[user];
+                const data = activePasswords[user];
+                const badges = `
+                    ${data.perms.add ? '<span style="color:#059669;">[Add]</span>' : ''}
+                    ${data.perms.approve ? '<span style="color:#2563eb;">[Approve]</span>' : ''}
+                    ${data.perms.delete ? '<span style="color:#dc2626;">[Delete]</span>' : ''}
+                    ${data.perms.complaints ? '<span style="color:#eab308;">[Comp]</span>' : ''}
+                    ${data.perms.amounts ? '<span style="color:#14b8a6;">[Amt]</span>' : ''}
+                    ${data.perms.admin ? '<span style="color:#9333ea;">[Admin]</span>' : ''}
+                `;
+                
                 list.innerHTML += `
                     <div class="user-row">
                         <div>
                             <strong style="font-size:14px; color:var(--dark);">${user}</strong><br>
-                            <span style="font-size:11px; color:gray;">Password: ${pass}</span>
+                            <span style="font-size:10px; color:gray;">Pass: ${data.pass} <br>${badges}</span>
                         </div>
                         <div style="display:flex; gap:6px;">
-                            <button onclick="editUser('${user}', '${pass}')" style="background:#e2e8f0; border:none; padding:6px 10px; border-radius:4px; cursor:pointer; font-size:12px;">✏️</button>
-                            ${user !== 'Admin' ? `<button onclick="deleteUser('${user}')" style="background:#fee2e2; border:none; padding:6px 10px; border-radius:4px; cursor:pointer; font-size:12px;">🗑️</button>` : ''}
+                            <button onclick="editUser('${user}')" style="background:#e2e8f0; border:none; padding:6px 10px; border-radius:4px; cursor:pointer; font-size:12px;">✏️</button>
+                            ${!data.perms.admin ? `<button onclick="deleteUser('${user}')" style="background:#fee2e2; border:none; padding:6px 10px; border-radius:4px; cursor:pointer; font-size:12px;">🗑️</button>` : ''}
                         </div>
                     </div>
                 `;
@@ -314,66 +393,81 @@
         function saveUser() {
             const name = document.getElementById('su-name').value.trim();
             const pass = document.getElementById('su-pass').value.trim();
-            
             if(!name || !pass) return alert("Both Username and Password are required!");
             
-            passRef.child(name).set(pass).then(() => {
-                document.getElementById('su-name').value = '';
-                document.getElementById('su-pass').value = '';
-                alert("User successfully saved!");
-            });
+            const userData = {
+                pass: pass,
+                perms: {
+                    add: document.getElementById('perm-add').checked,
+                    approve: document.getElementById('perm-approve').checked,
+                    delete: document.getElementById('perm-delete').checked,
+                    admin: document.getElementById('perm-admin').checked,
+                    complaints: document.getElementById('perm-complaints').checked,
+                    amounts: document.getElementById('perm-amounts').checked
+                }
+            };
+            
+            passRef.child(name).set(userData).then(() => { closeSettings(); alert("User successfully saved!"); });
         }
 
-        function editUser(user, pass) {
+        function editUser(user) {
+            const data = activePasswords[user];
             document.getElementById('su-name').value = user;
-            document.getElementById('su-pass').value = pass;
+            document.getElementById('su-name').disabled = true; // Lock username
+            document.getElementById('su-pass').value = data.pass;
+            document.getElementById('perm-add').checked = data.perms.add;
+            document.getElementById('perm-approve').checked = data.perms.approve;
+            document.getElementById('perm-delete').checked = data.perms.delete;
+            document.getElementById('perm-admin').checked = data.perms.admin;
+            document.getElementById('perm-complaints').checked = data.perms.complaints;
+            document.getElementById('perm-amounts').checked = data.perms.amounts;
         }
 
         function deleteUser(user) {
-            if(user === 'Admin') return alert("Admin cannot be deleted!");
-            if(confirm(`Are you sure you want to delete the user: ${user}?`)) {
-                passRef.child(user).remove();
-            }
+            if(activePasswords[user].perms.admin) return alert("Admins cannot be deleted via the quick menu!");
+            if(confirm(`Are you sure you want to delete the user: ${user}?`)) { passRef.child(user).remove(); }
         }
 
         // ================= CORE APP =================
         function getLocalDate() {
-            const d = new Date();
-            d.setMinutes(d.getMinutes() - d.getTimezoneOffset());
+            const d = new Date(); d.setMinutes(d.getMinutes() - d.getTimezoneOffset());
             return d.toISOString().split('T')[0];
         }
 
-        function login(role) {
+        function login(role, isAuto = false) {
             const passInput = document.getElementById('passField');
+            const userObj = activePasswords[role];
             
-            if (passInput.value !== activePasswords[role]) {
+            if(!userObj) return; 
+
+            if (!isAuto && passInput.value !== userObj.pass) {
                 passInput.value = ''; 
                 return alert("Invalid Password");
             }
+            
+            // Save Session
+            localStorage.setItem('urbanCasaUser', role);
             
             if ("Notification" in window) Notification.requestPermission();
             currentUser = role;
             document.getElementById('userDisplay').innerText = role.split(' ')[0].toUpperCase();
 
-            // Display settings button only for Admin
-            if(role === 'Admin') {
-                document.getElementById('settingsBtn').style.display = 'block';
-            }
+            // Set UI based on Permissions
+            document.getElementById('settingsBtn').style.display = userObj.perms.admin ? 'block' : 'none';
+            document.getElementById('exportBtn').style.display = userObj.perms.admin ? 'block' : 'none';
+            document.getElementById('dispatch-form-container').style.display = userObj.perms.add ? 'block' : 'none';
+            
+            document.getElementById('tab-comp').style.display = userObj.perms.complaints ? 'block' : 'none';
+            document.getElementById('complaint-form-container').style.display = (userObj.perms.add && userObj.perms.complaints) ? 'block' : 'none';
 
-            // Hide entry forms entirely if user is Satish
-            if(role.toLowerCase().includes('satish')) {
-                document.getElementById('dispatch-form-container').style.display = 'none';
-                document.getElementById('complaint-form-container').style.display = 'none';
-            } else {
-                document.getElementById('dispatch-form-container').style.display = 'block';
-                document.getElementById('complaint-form-container').style.display = 'block';
-            }
+            document.getElementById('stat-card-amt').style.display = userObj.perms.amounts ? 'block' : 'none';
+            document.getElementById('stats-container').style.gridTemplateColumns = userObj.perms.amounts ? '1fr 1fr 1fr' : '1fr 1fr';
 
             document.getElementById('login-overlay').style.display = 'none';
             document.getElementById('app-content').style.display = 'flex';
             
             loadData();
-            loadComplaints();
+            if(userObj.perms.complaints) loadComplaints();
         }
 
         function switchView(view) {
@@ -392,27 +486,31 @@
 
         // ================= DISPATCH LOGIC =================
         function submitDispatch() {
-            if(currentUser.toLowerCase().includes('satish')) {
-                return alert("Access Denied: You do not have permission to add new entries.");
-            }
+            const perms = activePasswords[currentUser].perms;
+            if(!perms.add) return alert("Access Denied: You do not have permission to add new entries.");
 
-            const n = document.getElementById('d-name').value;
-            if(!n) return alert("Customer Name is required");
+            const n = document.getElementById('d-name').value.trim();
+            const ph = document.getElementById('d-phone').value.trim();
+            const loc = document.getElementById('d-loc').value.trim();
+            
+            if(!n || !ph || !loc) return alert("Customer Name, Mobile, and Area are required fields!");
+            
             const isPay = document.getElementById('d-payType').value;
+            const amt = (perms.amounts && isPay === 'YES') ? (Number(document.getElementById('d-payAmt').value) || 0) : 0;
             
             recordsRef.push({
                 name: n.toUpperCase(),
-                phone: document.getElementById('d-phone').value,
+                phone: ph,
                 billNo: document.getElementById('d-bill').value,
                 exec: document.getElementById('d-exec').value.toUpperCase(),
-                loc: document.getElementById('d-loc').value.toUpperCase(),
+                loc: loc.toUpperCase(),
                 qty: document.getElementById('d-qty').value || '1',
                 date: getLocalDate(),
                 statusText: 'NEW',
                 approved: false,
                 payPending: isPay,
                 payReceived: false,
-                payAmount: isPay === 'YES' ? (Number(document.getElementById('d-payAmt').value) || 0) : 0
+                payAmount: amt
             });
 
             ['d-name', 'd-phone', 'd-bill', 'd-exec', 'd-loc', 'd-payAmt'].forEach(id => document.getElementById(id).value = '');
@@ -420,13 +518,12 @@
             document.getElementById('d-payType').value = 'NO';
             document.getElementById('d-payAmt').style.display = 'none';
             
-            // Auto collapse form after submission
             toggleDispatchForm(); 
             alert("Entry Added!");
         }
 
         function loadData() {
-            recordsRef.on('value', snap => {
+            queryRef.on('value', snap => {
                 const data = snap.val() || {};
                 const list = Object.keys(data).map(k => {
                     if(!data[k].billDate) recordsRef.child(k).update({ billDate: getLocalDate() });
@@ -444,6 +541,57 @@
             });
         }
 
+        // ================= EDIT DISPATCH LOGIC =================
+        function openEditModal(id) {
+            const item = globalData.find(i => i.id === id);
+            if(!item) return;
+
+            document.getElementById('e-id').value = id;
+            document.getElementById('e-name').value = item.name || '';
+            document.getElementById('e-phone').value = item.phone || '';
+            document.getElementById('e-bill').value = item.billNo || '';
+            document.getElementById('e-exec').value = item.exec || '';
+            document.getElementById('e-loc').value = item.loc || '';
+            document.getElementById('e-qty').value = item.qty || '1';
+            
+            document.getElementById('e-payType').value = item.payPending || 'NO';
+            handlePayChange(item.payPending || 'NO', 'e-payAmt');
+            document.getElementById('e-payAmt').value = item.payAmount || '';
+            
+            document.getElementById('edit-modal').style.display = 'flex';
+        }
+
+        function closeEditModal() {
+            document.getElementById('edit-modal').style.display = 'none';
+        }
+
+        function saveEditDispatch() {
+            const id = document.getElementById('e-id').value;
+            const perms = activePasswords[currentUser].perms;
+            
+            let updates = {
+                name: document.getElementById('e-name').value.toUpperCase(),
+                phone: document.getElementById('e-phone').value,
+                billNo: document.getElementById('e-bill').value,
+                exec: document.getElementById('e-exec').value.toUpperCase(),
+                loc: document.getElementById('e-loc').value.toUpperCase(),
+                qty: document.getElementById('e-qty').value || '1'
+            };
+
+            const isPay = document.getElementById('e-payType').value;
+            updates.payPending = isPay;
+            
+            if(perms.amounts && isPay === 'YES') {
+                updates.payAmount = Number(document.getElementById('e-payAmt').value) || 0;
+            }
+
+            recordsRef.child(id).update(updates).then(() => {
+                closeEditModal();
+                alert("Entry Updated!");
+            });
+        }
+
+        // ================= FILTER / RENDER =================
         function setFilter(type, el) {
             currentFilter = type;
             document.querySelectorAll('.chip').forEach(c => c.classList.remove('active'));
@@ -493,6 +641,7 @@
             const t0 = getLocalDate();
             const tmrw = new Date(); tmrw.setDate(tmrw.getDate() + 1);
             const t1 = tmrw.toISOString().split('T')[0];
+            const userPerms = activePasswords[currentUser].perms;
 
             list.innerHTML = '';
 
@@ -512,7 +661,17 @@
                     if(!m) return;
                 }
 
-                const deleteBtn = currentUser === 'Admin' ? `<div onclick="if(confirm('Delete this record?')) recordsRef.child('${item.id}').remove()" style="color:var(--danger); font-size:14px; cursor:pointer; padding: 4px;">🗑️</div>` : '';
+                const editBtn = userPerms.add || userPerms.admin ? `<div onclick="openEditModal('${item.id}')" style="color:var(--accent); font-size:14px; cursor:pointer; padding: 4px;">✏️</div>` : '';
+                const deleteBtn = userPerms.delete ? `<div onclick="if(confirm('Delete this record?')) recordsRef.child('${item.id}').remove()" style="color:var(--danger); font-size:14px; cursor:pointer; padding: 4px;">🗑️</div>` : '';
+
+                let paymentHtml = `<div style="color:var(--success); font-weight:700;">✅ PAID</div>`;
+                if(item.payPending === 'YES' && !item.payReceived) {
+                    const payText = userPerms.amounts ? `⚠️ COLLECT: ₹${item.payAmount}` : `⚠️ COLLECTION PENDING`;
+                    paymentHtml = `<div class="card-pay-blink">${payText}</div>`;
+                    if(userPerms.admin) {
+                        paymentHtml += `<button onclick="recordsRef.child('${item.id}').update({payReceived:true})" style="background:#ef4444; color:white; border:none; padding:6px 10px; border-radius:6px; font-size:10px; font-weight:800; cursor:pointer;">MARK PAID</button>`;
+                    }
+                }
 
                 const card = document.createElement('div');
                 card.className = `mobile-card ${item.approved && !isD ? 'card-approved' : ''}`;
@@ -523,7 +682,7 @@
                             <b style="font-size:15px;">${item.name}</b>
                             <span class="${item.statusText==='NEW'?'card-badge-blink':''}" style="font-size:10px; background:#f1f5f9; padding:4px 8px; border-radius:4px; margin-left:6px;">${item.statusText}</span>
                         </div>
-                        ${deleteBtn}
+                        <div style="display:flex; gap:8px;">${editBtn}${deleteBtn}</div>
                     </div>
                     <div style="font-size:11px; color:gray; margin:8px 0; display:flex; justify-content:space-between; align-items:center;">
                         <div style="line-height: 1.6;">
@@ -535,10 +694,7 @@
                         </span>
                     </div>
                     <div style="background:#f8fafc; padding:10px; border-radius:8px; border:1px solid #e2e8f0; margin-bottom:10px; display:flex; justify-content:space-between; align-items:center;">
-                        ${item.payPending === 'YES' && !item.payReceived ? 
-                            `<div class="card-pay-blink">⚠️ COLLECT: ₹${item.payAmount}</div>
-                             ${currentUser === 'Admin' ? `<button onclick="recordsRef.child('${item.id}').update({payReceived:true})" style="background:#ef4444; color:white; border:none; padding:6px 10px; border-radius:6px; font-size:10px; font-weight:800; cursor:pointer;">MARK PAID</button>` : ''}` 
-                            : `<div style="color:var(--success); font-weight:700;">✅ PAID</div>`}
+                        ${paymentHtml}
                     </div>
                     <div style="display:flex; gap:8px;">${getActionBtn(item)}</div>
                 `;
@@ -548,14 +704,13 @@
 
         function getActionBtn(i) {
             let btns = '';
-            const canApprove = currentUser === 'Admin';
+            const perms = activePasswords[currentUser].perms;
+            const margin = perms.approve ? '8px' : '0px';
 
-            if (canApprove) btns += `<button onclick="recordsRef.child('${i.id}').update({approved:!${i.approved}})" style="flex:1; padding:12px; background:var(--dark); color:white; border:none; border-radius:8px; font-weight:700; cursor:pointer;">${i.approved?'REVOKE':'APPROVE'}</button>`;
+            if (perms.approve) btns += `<button onclick="recordsRef.child('${i.id}').update({approved:!${i.approved}})" style="flex:1; padding:12px; background:var(--dark); color:white; border:none; border-radius:8px; font-weight:700; cursor:pointer;">${i.approved?'REVOKE':'APPROVE'}</button>`;
             
-            const margin = canApprove ? '8px' : '0px';
-
             if (i.statusText === 'NEW') btns += `<button onclick="recordsRef.child('${i.id}').update({statusText:'PENDING'})" style="flex:1; padding:12px; background:var(--accent); color:white; border:none; border-radius:8px; font-weight:700; cursor:pointer; margin-left:${margin};">QC DONE</button>`;
-            else if (i.statusText === 'PENDING' && !i.approved) btns += !canApprove ? `<div style="flex:1; text-align:center; color:gray; padding:12px; border:1px dashed #ccc; border-radius:8px; font-size:11px; margin-left:${margin};">WAITING APPROVAL</div>` : '';
+            else if (i.statusText === 'PENDING' && !i.approved) btns += !perms.approve ? `<div style="flex:1; text-align:center; color:gray; padding:12px; border:1px dashed #ccc; border-radius:8px; font-size:11px; margin-left:${margin};">WAITING APPROVAL</div>` : '';
             else if (i.approved && i.statusText !== 'DELIVERED') btns += `<button onclick="dispatch('${i.id}')" style="flex:1; padding:12px; background:#25d366; color:white; border:none; border-radius:8px; font-weight:700; cursor:pointer; margin-left:${margin};">DISPATCH</button>`;
             else if (i.statusText === 'DELIVERED') btns += `<div style="flex:1; text-align:center; color:var(--success); font-weight:800; padding:12px; margin-left:${margin};">DELIVERED</div>`;
             return btns;
@@ -563,10 +718,15 @@
 
         function dispatch(id) {
             const item = globalData.find(i => i.id === id);
+            const userPerms = activePasswords[currentUser].perms;
             const dDate = new Date().toLocaleDateString('en-GB'); 
             const bDateRaw = item.billDate || getLocalDate();
             const bDate = bDateRaw.split('-').reverse().join('/');
-            const pay = (item.payPending === 'YES' && !item.payReceived) ? '₹' + item.payAmount : 'PAID';
+            
+            let pay = 'PAID';
+            if (item.payPending === 'YES' && !item.payReceived) {
+                pay = userPerms.amounts ? '₹' + item.payAmount : 'COLLECTION PENDING';
+            }
             const qcName = currentUser.split(' ')[0]; 
 
             const msg = `URBAN CASA DISPATCH\n------------------------------------------\n📅Dispatch Date: ${dDate}\n\n📅Bill Date: ${bDate}\n\n🧾Bill No: ${item.billNo || 'N/A'}\n\n👤Customer: ${item.name || 'N/A'}\n\n👤Sales Executive: ${item.exec || 'N/A'}\n\n📍Location: ${item.loc || 'N/A'}\n\n📒Qty: ${item.qty || '1'}\n\n💰Payment Due: ${pay}\n\n✅QC Checked By: ${qcName}\n------------------------------------------\n🚚Status: Dispatched`;
@@ -598,7 +758,8 @@
                 if(item.statusText === 'IN PROGRESS') sClass = 'comp-prog';
                 if(item.statusText === 'RESOLVED') sClass = 'comp-res';
 
-                const deleteBtn = currentUser === 'Admin' ? `<div onclick="if(confirm('Delete Complaint?')) compRef.child('${item.id}').remove()" style="color:var(--danger); font-size:14px; cursor:pointer; padding: 4px;">🗑️</div>` : '';
+                const deleteBtn = activePasswords[currentUser].perms.delete ? `<div onclick="if(confirm('Delete Complaint?')) compRef.child('${item.id}').remove()" style="color:var(--danger); font-size:14px; cursor:pointer; padding: 4px;">🗑️</div>` : '';
+                const stamp = item.lastUpdated ? `<div style="font-size:9px; color:#94a3b8; margin-top:6px;">Last Update: ${item.lastUpdated}</div>` : '';
 
                 const card = document.createElement('div');
                 card.className = 'mobile-card';
@@ -615,6 +776,7 @@
                         <div style="margin-top:6px; background:#f8fafc; padding:8px; border-radius:6px; border:1px solid #e2e8f0; color:var(--dark);">
                             📝 ${item.details}
                         </div>
+                        ${stamp}
                     </div>
                 `;
                 list.appendChild(card);
@@ -622,33 +784,52 @@
         }
 
         function submitComplaint() {
-            if(currentUser.toLowerCase().includes('satish')) {
-                return alert("Access Denied: You do not have permission to log new complaints.");
-            }
+            if(!activePasswords[currentUser].perms.add) return alert("Access Denied: You do not have permission to log new complaints.");
 
-            const n = document.getElementById('c-name').value;
-            if(!n) return alert("Customer Name is required");
+            const n = document.getElementById('c-name').value.trim();
+            const ph = document.getElementById('c-phone').value.trim();
+            const loc = document.getElementById('c-loc').value.trim();
+            
+            if(!n || !ph || !loc) return alert("Customer Name, Mobile, and Area are required fields!");
             
             compRef.push({
                 name: n.toUpperCase(),
-                phone: document.getElementById('c-phone').value,
-                loc: document.getElementById('c-loc').value.toUpperCase(),
+                phone: ph,
+                loc: loc.toUpperCase(),
                 details: document.getElementById('c-det').value,
                 date: getLocalDate(),
-                statusText: 'NEW'
+                statusText: 'NEW',
+                lastUpdated: new Date().toLocaleString('en-GB')
             });
 
             ['c-name', 'c-phone', 'c-loc', 'c-det'].forEach(id => document.getElementById(id).value = '');
-            
-            // Auto collapse form after submission
-            toggleCompForm();
-            alert("Complaint Logged Successfully!");
+            toggleCompForm(); alert("Complaint Logged Successfully!");
         }
 
         function cycleCompStatus(id, currentStatus) {
             const cycle = { 'NEW': 'IN PROGRESS', 'IN PROGRESS': 'RESOLVED', 'RESOLVED': 'NEW' };
             const nextStatus = cycle[currentStatus] || 'IN PROGRESS';
-            compRef.child(id).update({ statusText: nextStatus });
+            compRef.child(id).update({ 
+                statusText: nextStatus,
+                lastUpdated: new Date().toLocaleString('en-GB')
+            });
+        }
+
+        // ================= EXPORT DATA =================
+        function exportToCSV() {
+            let csv = "Date,Name,Phone,Bill_No,Executive,Area,Qty,Status,Payment_Pending,Amount,Paid_Status\n";
+            globalData.forEach(i => {
+                const safeName = (i.name||'').replace(/,/g, '');
+                const safeLoc = (i.loc||'').replace(/,/g, '');
+                const paidStat = i.payReceived ? "PAID" : "UNPAID";
+                csv += `${i.date},${safeName},${i.phone},${i.billNo},${i.exec},${safeLoc},${i.qty},${i.statusText},${i.payPending},${i.payAmount},${paidStat}\n`;
+            });
+            const blob = new Blob([csv], { type: 'text/csv' });
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.setAttribute('href', url);
+            a.setAttribute('download', `UrbanCasa_Dispatch_${getLocalDate()}.csv`);
+            a.click();
         }
     </script>
 </body>

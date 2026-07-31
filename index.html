@@ -503,6 +503,7 @@
                 exec: document.getElementById('d-exec').value.toUpperCase(),
                 loc: loc.toUpperCase(),
                 qty: document.getElementById('d-qty').value || '1',
+                packages: '', 
                 date: getLocalDate(),
                 statusText: 'NEW',
                 approved: false,
@@ -633,6 +634,19 @@
                 alert("Entry Updated!");
             });
         }
+        
+        // ================= QC PACKAGING PROMPT =================
+        function promptQcDone(id) {
+            const pkgs = prompt("Enter the number of packages for this dispatch:");
+            if (pkgs !== null && pkgs.trim() !== "") {
+                recordsRef.child(id).update({
+                    statusText: 'PENDING',
+                    packages: pkgs.trim()
+                });
+            } else if (pkgs !== null) {
+                alert("Please enter a valid number of packages.");
+            }
+        }
 
         // ================= FILTER / RENDER =================
         function setFilter(type, el) {
@@ -722,6 +736,9 @@
                         paymentHtml += `<button onclick="recordsRef.child('${item.id}').update({payReceived:true})" style="background:#ef4444; color:white; border:none; padding:6px 10px; border-radius:6px; font-size:10px; font-weight:800; cursor:pointer;">MARK PAID</button>`;
                     }
                 }
+                
+                // Show Packages if entered
+                const pkgHtml = item.packages ? `<br><span style="color:var(--warning); font-weight:800;">\uD83D\uDCE6 Pkgs: ${item.packages}</span>` : '';
 
                 const card = document.createElement('div');
                 card.className = `mobile-card ${item.approved && !isD ? 'card-approved' : ''}`;
@@ -738,6 +755,7 @@
                         <div style="line-height: 1.6;">
                             Bill: ${item.billNo || 'NA'} | Area: ${item.loc || 'NA'} <br>
                             <span style="color:var(--accent); font-weight:700;">Exec: ${item.exec || 'NA'}</span>
+                            ${pkgHtml}
                         </div>
                         <span style="display:flex; align-items:center; gap:4px; background:#f8fafc; padding:2px 6px; border-radius:4px; border:1px solid #e2e8f0; height:fit-content;">
                             \uD83D\uDCC5 <input type="date" value="${item.date || t0}" onchange="recordsRef.child('${item.id}').update({ date: this.value })" style="border:none; background:transparent; font-size:10px; font-family:inherit; outline:none; color:var(--dark);">
@@ -760,7 +778,7 @@
 
             if (perms.approve) btns += `<button onclick="recordsRef.child('${i.id}').update({approved:!${i.approved}})" style="flex:1; padding:12px; background:var(--dark); color:white; border:none; border-radius:8px; font-weight:700; cursor:pointer;">${i.approved?'REVOKE':'APPROVE'}</button>`;
             
-            if (i.statusText === 'NEW') btns += `<button onclick="recordsRef.child('${i.id}').update({statusText:'PENDING'})" style="flex:1; padding:12px; background:var(--accent); color:white; border:none; border-radius:8px; font-weight:700; cursor:pointer; margin-left:${margin};">QC DONE</button>`;
+            if (i.statusText === 'NEW') btns += `<button onclick="promptQcDone('${i.id}')" style="flex:1; padding:12px; background:var(--accent); color:white; border:none; border-radius:8px; font-weight:700; cursor:pointer; margin-left:${margin};">QC DONE</button>`;
             else if (i.statusText === 'PENDING' && !i.approved) btns += !perms.approve ? `<div style="flex:1; text-align:center; color:gray; padding:12px; border:1px dashed #ccc; border-radius:8px; font-size:11px; margin-left:${margin};">WAITING APPROVAL</div>` : '';
             // Core fix: explicitly lock out Shiva from ever seeing the Dispatch button
             else if (i.approved && i.statusText !== 'DELIVERED' && !isShiva) btns += `<button onclick="dispatch('${i.id}')" style="flex:1; padding:12px; background:#25d366; color:white; border:none; border-radius:8px; font-weight:700; cursor:pointer; margin-left:${margin};">DISPATCH</button>`;
@@ -782,7 +800,7 @@
             
             const qcName = currentUser.split(' ')[0]; 
 
-            const msg = `URBAN CASA DISPATCH\n------------------------------------------\n\uD83D\uDCC5Dispatch Date: ${dDate}\n\n\uD83D\uDCC5Bill Date: ${bDate}\n\n\uD83E\uDDFEBill No: ${item.billNo || 'N/A'}\n\n\uD83D\uDC64Customer: ${item.name || 'N/A'}\n\n\uD83D\uDC64Sales Executive: ${item.exec || 'N/A'}\n\n\uD83D\uDCCDLocation: ${item.loc || 'N/A'}\n\n\uD83D\uDCD2Qty: ${item.qty || '1'}\n\n\uD83D\uDCB0Payment Due: ${pay}\n\n\u2705QC Checked By: ${qcName}\n------------------------------------------\n\uD83D\uDE9AStatus: Dispatched`;
+            const msg = `URBAN CASA DISPATCH\n------------------------------------------\n\uD83D\uDCC5Dispatch Date: ${dDate}\n\n\uD83D\uDCC5Bill Date: ${bDate}\n\n\uD83E\uDDFEBill No: ${item.billNo || 'N/A'}\n\n\uD83D\uDC64Customer: ${item.name || 'N/A'}\n\n\uD83D\uDC64Sales Executive: ${item.exec || 'N/A'}\n\n\uD83D\uDCCDLocation: ${item.loc || 'N/A'}\n\n\uD83D\uDCD2Qty: ${item.qty || '1'}\n\n\uD83D\uDCE6Packages: ${item.packages || 'N/A'}\n\n\uD83D\uDCB0Payment Due: ${pay}\n\n\u2705QC Checked By: ${qcName}\n------------------------------------------\n\uD83D\uDE9AStatus: Dispatched`;
             
             recordsRef.child(id).update({statusText:'DELIVERED'});
             window.open(`https://wa.me/?text=${encodeURIComponent(msg)}`, '_blank');
@@ -871,14 +889,15 @@
 
         // ================= EXPORT DATA =================
         function exportToCSV() {
-            let csv = "Date,Name,Phone,Bill_No,Executive,Area,Qty,Status,Payment_Pending,Amount,Paid_Status\n";
+            let csv = "Date,Name,Phone,Bill_No,Executive,Area,Qty,Packages,Status,Payment_Pending,Amount,Paid_Status\n";
             globalData.forEach(i => {
                 const safeName = `"${(i.name||'').replace(/"/g, '""')}"`;
                 const safeLoc = `"${(i.loc||'').replace(/"/g, '""')}"`;
                 const safeExec = `"${(i.exec||'').replace(/"/g, '""')}"`;
+                const safePkgs = `"${(i.packages||'')}"`;
                 const paidStat = i.payReceived ? "PAID" : "UNPAID";
                 
-                csv += `${i.date},${safeName},${i.phone},${i.billNo},${safeExec},${safeLoc},${i.qty},${i.statusText},${i.payPending},${i.payAmount},${paidStat}\n`;
+                csv += `${i.date},${safeName},${i.phone},${i.billNo},${safeExec},${safeLoc},${i.qty},${safePkgs},${i.statusText},${i.payPending},${i.payAmount},${paidStat}\n`;
             });
             const blob = new Blob([csv], { type: 'text/csv' });
             const url = window.URL.createObjectURL(blob);

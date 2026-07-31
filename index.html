@@ -624,7 +624,8 @@
                     if(i.statusText === 'NEW') { s.n++; s.qc++; }
                     if(i.statusText === 'PENDING') s.p++;
                     
-                    if(i.statusText === 'NEW' || i.statusText === 'PENDING') s.new_qc++;
+                    // Count for Shiva's exclusive filter (Only unapproved entries)
+                    if((i.statusText === 'NEW' || i.statusText === 'PENDING') && !i.approved) s.new_qc++;
                 }
                 if(i.payPending === 'YES' && !i.payReceived) s.amt += parseFloat(i.payAmount || 0);
             });
@@ -646,7 +647,6 @@
             if(document.getElementById('c-pen')) document.getElementById('c-pen').innerText = `(${s.p})`;
             if(document.getElementById('c-done')) document.getElementById('c-done').innerText = `(${s.d})`;
             
-            // Custom stat for Shiva
             if(document.getElementById('c-new-qc')) document.getElementById('c-new-qc').innerText = `(${s.new_qc})`;
         }
 
@@ -668,7 +668,8 @@
                 else if(currentFilter === 'DELIVERED' && isD) show = true;
                 else if(currentFilter === 'TODAY' && item.date === t0 && !isD) show = true;
                 else if(currentFilter === 'TOMORROW' && item.date === t1 && !isD) show = true;
-                else if(currentFilter === 'NEW_QC_PENDING' && (item.statusText === 'NEW' || item.statusText === 'PENDING') && !isD) show = true;
+                // Core fix: Only show if NOT approved yet
+                else if(currentFilter === 'NEW_QC_PENDING' && (item.statusText === 'NEW' || item.statusText === 'PENDING') && !item.approved && !isD) show = true;
                 else if(item.statusText === currentFilter && !isD) show = true;
 
                 if(!show) return;
@@ -722,12 +723,14 @@
             let btns = '';
             const perms = activePasswords[currentUser].perms;
             const margin = perms.approve ? '8px' : '0px';
+            const isShiva = currentUser.toLowerCase().includes('shiva');
 
             if (perms.approve) btns += `<button onclick="recordsRef.child('${i.id}').update({approved:!${i.approved}})" style="flex:1; padding:12px; background:var(--dark); color:white; border:none; border-radius:8px; font-weight:700; cursor:pointer;">${i.approved?'REVOKE':'APPROVE'}</button>`;
             
             if (i.statusText === 'NEW') btns += `<button onclick="recordsRef.child('${i.id}').update({statusText:'PENDING'})" style="flex:1; padding:12px; background:var(--accent); color:white; border:none; border-radius:8px; font-weight:700; cursor:pointer; margin-left:${margin};">QC DONE</button>`;
             else if (i.statusText === 'PENDING' && !i.approved) btns += !perms.approve ? `<div style="flex:1; text-align:center; color:gray; padding:12px; border:1px dashed #ccc; border-radius:8px; font-size:11px; margin-left:${margin};">WAITING APPROVAL</div>` : '';
-            else if (i.approved && i.statusText !== 'DELIVERED') btns += `<button onclick="dispatch('${i.id}')" style="flex:1; padding:12px; background:#25d366; color:white; border:none; border-radius:8px; font-weight:700; cursor:pointer; margin-left:${margin};">DISPATCH</button>`;
+            // Core fix: explicitly lock out Shiva from ever seeing the Dispatch button
+            else if (i.approved && i.statusText !== 'DELIVERED' && !isShiva) btns += `<button onclick="dispatch('${i.id}')" style="flex:1; padding:12px; background:#25d366; color:white; border:none; border-radius:8px; font-weight:700; cursor:pointer; margin-left:${margin};">DISPATCH</button>`;
             else if (i.statusText === 'DELIVERED') btns += `<div style="flex:1; text-align:center; color:var(--success); font-weight:800; padding:12px; margin-left:${margin};">DELIVERED</div>`;
             return btns;
         }

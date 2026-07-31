@@ -191,12 +191,7 @@
             </div>
 
             <div class="filter-chips" id="filterContainer">
-                <div class="chip active" onclick="setFilter('ALL', this)">ALL <span id="c-all"></span></div>
-                <div class="chip" onclick="setFilter('TODAY', this)">TODAY <span id="c-today"></span></div>
-                <div class="chip" onclick="setFilter('TOMORROW', this)">TOMORROW <span id="c-tom"></span></div>
-                <div class="chip" onclick="setFilter('NEW', this)">NEW <span id="c-new"></span></div>
-                <div class="chip" onclick="setFilter('PENDING', this)">PENDING <span id="c-pen"></span></div>
-                <div class="chip" onclick="setFilter('DELIVERED', this)">DONE <span id="c-done"></span></div>
+                <!-- Dynamically populated based on user -->
             </div>
 
             <div class="container" id="card-list"></div>
@@ -231,7 +226,6 @@
         firebase.initializeApp(firebaseConfig);
         const db = firebase.database();
         
-        // Limits initial fetch to 300 records to prevent browser crash
         const recordsRef = db.ref('dispatch_records');
         const queryRef = recordsRef.limitToLast(300); 
         const compRef = db.ref('complaints_records').limitToLast(200);
@@ -246,7 +240,8 @@
             'Suman (Supervisor)': { pass: 'suman2024', perms: { add: true, approve: true, delete: false, admin: false, complaints: true, amounts: false } },
             'Arjun': { pass: 'arjun123', perms: { add: true, approve: true, delete: false, admin: false, complaints: true, amounts: false } },
             'Riyaz': { pass: 'riyaz123', perms: { add: true, approve: true, delete: false, admin: false, complaints: true, amounts: false } },
-            'Satish': { pass: 'satish123', perms: { add: false, approve: false, delete: false, admin: false, complaints: false, amounts: false } }
+            'Satish': { pass: 'satish123', perms: { add: false, approve: false, delete: false, admin: false, complaints: false, amounts: false } },
+            'Shiva': { pass: 'shiva123', perms: { add: false, approve: false, delete: false, admin: false, complaints: false, amounts: false } }
         };
 
         if ('serviceWorker' in navigator) { navigator.serviceWorker.register('sw.js'); }
@@ -261,7 +256,7 @@
                         activePasswords[user] = {
                             pass: rawData[user],
                             perms: {
-                                add: !user.toLowerCase().includes('satish'),
+                                add: !user.toLowerCase().includes('satish') && !user.toLowerCase().includes('shiva'),
                                 approve: user.toLowerCase() === 'admin',
                                 delete: user.toLowerCase() === 'admin',
                                 admin: user.toLowerCase() === 'admin',
@@ -275,6 +270,12 @@
                         if(activePasswords[user].perms.amounts === undefined) activePasswords[user].perms.amounts = activePasswords[user].perms.admin;
                     }
                 });
+
+                // Auto inject Shiva if missing
+                if (!activePasswords['Shiva']) {
+                    passRef.child('Shiva').set(defaultUsers['Shiva']);
+                }
+
             } else {
                 activePasswords = defaultUsers;
                 passRef.set(defaultUsers);
@@ -443,6 +444,23 @@
             document.getElementById('stat-card-amt').style.display = userObj.perms.amounts ? 'block' : 'none';
             document.getElementById('stats-container').style.gridTemplateColumns = userObj.perms.amounts ? '1fr 1fr 1fr' : '1fr 1fr';
 
+            // Filter configuration based on User Role
+            const filterContainer = document.getElementById('filterContainer');
+            if (role.toLowerCase().includes('shiva')) {
+                filterContainer.innerHTML = `<div class="chip active" onclick="setFilter('NEW_QC_PENDING', this)">NEW QC PENDING <span id="c-new-qc"></span></div>`;
+                currentFilter = 'NEW_QC_PENDING';
+            } else {
+                filterContainer.innerHTML = `
+                    <div class="chip active" onclick="setFilter('ALL', this)">ALL <span id="c-all"></span></div>
+                    <div class="chip" onclick="setFilter('TODAY', this)">TODAY <span id="c-today"></span></div>
+                    <div class="chip" onclick="setFilter('TOMORROW', this)">TOMORROW <span id="c-tom"></span></div>
+                    <div class="chip" onclick="setFilter('NEW', this)">NEW <span id="c-new"></span></div>
+                    <div class="chip" onclick="setFilter('PENDING', this)">PENDING <span id="c-pen"></span></div>
+                    <div class="chip" onclick="setFilter('DELIVERED', this)">DONE <span id="c-done"></span></div>
+                `;
+                currentFilter = 'ALL';
+            }
+
             document.getElementById('login-overlay').style.display = 'none';
             document.getElementById('app-content').style.display = 'flex';
             
@@ -505,14 +523,25 @@
         function loadData() {
             queryRef.on('value', snap => {
                 const data = snap.val() || {};
-                // Critical Fix: Removed the automatic Firebase update inside this map function to prevent infinite listener loops.
                 const list = Object.keys(data).map(k => {
                     return {...data[k], id: k};
                 }).reverse();
                 
                 if (lastCount !== 0 && list.length > lastCount) {
                     if (navigator.vibrate) navigator.vibrate([200, 100, 200]);
-                    if (Notification.permission === "granted") new Notification("URBAN CASA", { body: "New Entry Added" });
+                    const isShiva = currentUser.toLowerCase().includes('shiva');
+                    
+                    if (Notification.permission === "granted") {
+                        new Notification("URBAN CASA", { body: isShiva ? "New entry ready for packing!" : "New Entry Added" });
+                    }
+                    
+                    // Audio alert specifically to grab Shiva's attention for packing 
+                    if (isShiva) {
+                        try {
+                            const audio = new Audio('https://actions.google.com/sounds/v1/alarms/beep_short.ogg');
+                            audio.play();
+                        } catch(e) {}
+                    }
                 }
                 lastCount = list.length;
                 globalData = list;
@@ -580,7 +609,7 @@
         }
 
         function updateStats() {
-            let s = { amt: 0, del: 0, qc: 0, all: 0, today: 0, tom: 0, n: 0, p: 0, d: 0 };
+            let s = { amt: 0, del: 0, qc: 0, all: 0, today: 0, tom: 0, n: 0, p: 0, d: 0, new_qc: 0 };
             const t0 = getLocalDate();
             const tmrw = new Date(); tmrw.setDate(tmrw.getDate() + 1);
             const t1 = tmrw.toISOString().split('T')[0];
@@ -594,6 +623,8 @@
                     if(i.date === t1) s.tom++;
                     if(i.statusText === 'NEW') { s.n++; s.qc++; }
                     if(i.statusText === 'PENDING') s.p++;
+                    
+                    if(i.statusText === 'NEW' || i.statusText === 'PENDING') s.new_qc++;
                 }
                 if(i.payPending === 'YES' && !i.payReceived) s.amt += parseFloat(i.payAmount || 0);
             });
@@ -607,12 +638,16 @@
             s.qc > 0 ? qcBox.classList.add('stat-qc-blink') : qcBox.classList.remove('stat-qc-blink');
 
             document.getElementById('stat-del').innerText = s.del;
-            document.getElementById('c-all').innerText = `(${s.all})`;
-            document.getElementById('c-today').innerText = `(${s.today})`;
-            document.getElementById('c-tom').innerText = `(${s.tom})`;
-            document.getElementById('c-new').innerText = `(${s.n})`;
-            document.getElementById('c-pen').innerText = `(${s.p})`;
-            document.getElementById('c-done').innerText = `(${s.d})`;
+            
+            if(document.getElementById('c-all')) document.getElementById('c-all').innerText = `(${s.all})`;
+            if(document.getElementById('c-today')) document.getElementById('c-today').innerText = `(${s.today})`;
+            if(document.getElementById('c-tom')) document.getElementById('c-tom').innerText = `(${s.tom})`;
+            if(document.getElementById('c-new')) document.getElementById('c-new').innerText = `(${s.n})`;
+            if(document.getElementById('c-pen')) document.getElementById('c-pen').innerText = `(${s.p})`;
+            if(document.getElementById('c-done')) document.getElementById('c-done').innerText = `(${s.d})`;
+            
+            // Custom stat for Shiva
+            if(document.getElementById('c-new-qc')) document.getElementById('c-new-qc').innerText = `(${s.new_qc})`;
         }
 
         function renderCards() {
@@ -633,6 +668,7 @@
                 else if(currentFilter === 'DELIVERED' && isD) show = true;
                 else if(currentFilter === 'TODAY' && item.date === t0 && !isD) show = true;
                 else if(currentFilter === 'TOMORROW' && item.date === t1 && !isD) show = true;
+                else if(currentFilter === 'NEW_QC_PENDING' && (item.statusText === 'NEW' || item.statusText === 'PENDING') && !isD) show = true;
                 else if(item.statusText === currentFilter && !isD) show = true;
 
                 if(!show) return;
@@ -701,7 +737,6 @@
             const userPerms = activePasswords[currentUser].perms;
             const dDate = new Date().toLocaleDateString('en-GB'); 
             
-            // Fix: Fallback to the original logged date rather than forcing today's date if billDate is missing
             const bDateRaw = item.billDate || item.date || getLocalDate();
             const bDate = bDateRaw.split('-').reverse().join('/');
             
@@ -802,7 +837,6 @@
         function exportToCSV() {
             let csv = "Date,Name,Phone,Bill_No,Executive,Area,Qty,Status,Payment_Pending,Amount,Paid_Status\n";
             globalData.forEach(i => {
-                // Fix: Safely escape fields with quotes so commas in user inputs don't break the CSV columns
                 const safeName = `"${(i.name||'').replace(/"/g, '""')}"`;
                 const safeLoc = `"${(i.loc||'').replace(/"/g, '""')}"`;
                 const safeExec = `"${(i.exec||'').replace(/"/g, '""')}"`;

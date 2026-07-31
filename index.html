@@ -45,8 +45,8 @@
         .search-container { padding: 10px; background: white; border-bottom: 1px solid #e2e8f0; }
         #searchInput { width: 100%; padding: 12px; border: 1px solid #e2e8f0; border-radius: 8px; outline: none; box-sizing: border-box; }
         
-        .filter-chips { display: flex; gap: 8px; overflow-x: auto; padding: 10px; background: white; scrollbar-width: none; }
-        .chip { padding: 6px 14px; border-radius: 20px; background: #f1f5f9; font-size: 11px; font-weight: 700; white-space: nowrap; cursor: pointer; border: 1px solid #e2e8f0; }
+        .filter-chips { display: flex; gap: 8px; overflow-x: auto; padding: 10px; background: white; scrollbar-width: none; transition: all 0.3s; }
+        .chip { padding: 6px 14px; border-radius: 20px; background: #f1f5f9; font-size: 11px; font-weight: 700; white-space: nowrap; cursor: pointer; border: 1px solid #e2e8f0; transition: all 0.2s;}
         .chip.active { background: var(--accent); color: white; }
 
         .container { padding: 12px; flex: 1; overflow-y: auto; }
@@ -231,9 +231,13 @@
         const compRef = db.ref('complaints_records').limitToLast(200);
         const passRef = db.ref('settings/passwords');
 
-        let currentUser = '', globalData = [], globalComplaints = [], currentFilter = 'ALL', lastCount = 0;
+        let currentUser = '', globalData = [], globalComplaints = [], currentFilter = 'ALL';
         let activePasswords = {};
         let autoLoginAttempted = false;
+        
+        // Accurate unique ID tracking for robust real-time notifications
+        let knownIds = new Set();
+        let isInitialLoad = true;
 
         const defaultUsers = { 
             'Admin': { pass: 'admin789', perms: { add: true, approve: true, delete: true, admin: true, complaints: true, amounts: true } },
@@ -272,25 +276,19 @@
                 });
 
                 // Auto inject Shiva if missing
-                if (!activePasswords['Shiva']) {
-                    passRef.child('Shiva').set(defaultUsers['Shiva']);
-                }
+                if (!activePasswords['Shiva']) passRef.child('Shiva').set(defaultUsers['Shiva']);
 
             } else {
                 activePasswords = defaultUsers;
                 passRef.set(defaultUsers);
             }
             
-            if(document.getElementById('settings-modal').style.display === 'flex') {
-                renderSettingsUsers();
-            }
+            if(document.getElementById('settings-modal').style.display === 'flex') renderSettingsUsers();
 
             // Session Auto-Login
             if(!autoLoginAttempted) {
                 const savedUser = localStorage.getItem('urbanCasaUser');
-                if(savedUser && activePasswords[savedUser]) {
-                    login(savedUser, true);
-                }
+                if(savedUser && activePasswords[savedUser]) login(savedUser, true);
                 autoLoginAttempted = true;
             }
         });
@@ -340,9 +338,8 @@
         
         function closeSettings() {
             document.getElementById('settings-modal').style.display = 'none';
-            document.getElementById('su-name').value = '';
+            ['su-name', 'su-pass'].forEach(id => document.getElementById(id).value = '');
             document.getElementById('su-name').disabled = false; 
-            document.getElementById('su-pass').value = '';
             document.getElementById('perm-add').checked = true;
             document.getElementById('perm-approve').checked = false;
             document.getElementById('perm-delete').checked = false;
@@ -396,7 +393,6 @@
                     amounts: document.getElementById('perm-amounts').checked
                 }
             };
-            
             passRef.child(name).set(userData).then(() => { closeSettings(); alert("User successfully saved!"); });
         }
 
@@ -430,7 +426,11 @@
 
             localStorage.setItem('urbanCasaUser', role);
             
-            if ("Notification" in window) Notification.requestPermission();
+            // Safely handle Notification API access to prevent mobile crashes
+            if ("Notification" in window) {
+                try { Notification.requestPermission(); } catch(e) {}
+            }
+            
             currentUser = role;
             document.getElementById('userDisplay').innerText = role.split(' ')[0].toUpperCase();
 
@@ -444,10 +444,10 @@
             document.getElementById('stat-card-amt').style.display = userObj.perms.amounts ? 'block' : 'none';
             document.getElementById('stats-container').style.gridTemplateColumns = userObj.perms.amounts ? '1fr 1fr 1fr' : '1fr 1fr';
 
-            // Filter configuration based on User Role
+            // Filter configuration based on User Role (Shiva locks to his exclusive filter)
             const filterContainer = document.getElementById('filterContainer');
             if (role.toLowerCase().includes('shiva')) {
-                filterContainer.innerHTML = `<div class="chip active" onclick="setFilter('NEW_QC_PENDING', this)">NEW QC PENDING <span id="c-new-qc"></span></div>`;
+                filterContainer.innerHTML = `<div class="chip active" onclick="setFilter('NEW_QC_PENDING', this)" id="shiva-chip">NEW QC PENDING <span id="c-new-qc"></span></div>`;
                 currentFilter = 'NEW_QC_PENDING';
             } else {
                 filterContainer.innerHTML = `
@@ -521,30 +521,64 @@
         }
 
         function loadData() {
+            // Unsubscribe existing listeners to prevent double triggers if auto-relogged
+            queryRef.off('value'); 
+            
             queryRef.on('value', snap => {
                 const data = snap.val() || {};
-                const list = Object.keys(data).map(k => {
-                    return {...data[k], id: k};
-                }).reverse();
+                const list = Object.keys(data).map(k => ({...data[k], id: k}));
                 
-                if (lastCount !== 0 && list.length > lastCount) {
-                    if (navigator.vibrate) navigator.vibrate([200, 100, 200]);
+                let newlyAdded = false;
+
+                // ID Tracking ensures flawless real-time detection regardless of list length fluctuations
+                if (!isInitialLoad) {
+                    list.forEach(item => {
+                        if (!knownIds.has(item.id)) newlyAdded = true;
+                    });
+                }
+                
+                // Update tracker state
+                knownIds.clear();
+                list.forEach(item => knownIds.add(item.id));
+
+                if (newlyAdded) {
                     const isShiva = currentUser.toLowerCase().includes('shiva');
                     
-                    if (Notification.permission === "granted") {
-                        new Notification("URBAN CASA", { body: isShiva ? "New entry ready for packing!" : "New Entry Added" });
+                    try { if (navigator.vibrate) navigator.vibrate([200, 100, 200]); } catch(e){}
+                    
+                    // Safe Notification API Access
+                    if ("Notification" in window && Notification.permission === "granted") {
+                        try {
+                            new Notification("URBAN CASA", { 
+                                body: isShiva ? "New entry ready for packing!" : "New Entry Added",
+                                icon: "https://cdn-icons-png.flaticon.com/512/6815/6815116.png"
+                            });
+                        } catch(e) {}
                     }
                     
-                    // Audio alert specifically to grab Shiva's attention for packing 
+                    // Safe Audio API Access ensuring uncaught promise rejections DO NOT break the script
                     if (isShiva) {
                         try {
                             const audio = new Audio('https://actions.google.com/sounds/v1/alarms/beep_short.ogg');
-                            audio.play();
+                            const playPromise = audio.play();
+                            if (playPromise !== undefined) {
+                                playPromise.catch(error => {
+                                    console.log("Audio autoplay was blocked by the browser. Visual cues running instead.");
+                                });
+                            }
+                            
+                            // Visual cue on the filter chip specifically to grab Shiva's attention
+                            const shivaChip = document.getElementById('shiva-chip');
+                            if (shivaChip) {
+                                shivaChip.style.backgroundColor = 'var(--danger)';
+                                setTimeout(() => { shivaChip.style.backgroundColor = 'var(--accent)'; }, 2000);
+                            }
                         } catch(e) {}
                     }
                 }
-                lastCount = list.length;
-                globalData = list;
+                
+                isInitialLoad = false;
+                globalData = list.reverse();
                 updateStats();
                 renderCards();
             });
@@ -646,7 +680,6 @@
             if(document.getElementById('c-new')) document.getElementById('c-new').innerText = `(${s.n})`;
             if(document.getElementById('c-pen')) document.getElementById('c-pen').innerText = `(${s.p})`;
             if(document.getElementById('c-done')) document.getElementById('c-done').innerText = `(${s.d})`;
-            
             if(document.getElementById('c-new-qc')) document.getElementById('c-new-qc').innerText = `(${s.new_qc})`;
         }
 
@@ -668,7 +701,7 @@
                 else if(currentFilter === 'DELIVERED' && isD) show = true;
                 else if(currentFilter === 'TODAY' && item.date === t0 && !isD) show = true;
                 else if(currentFilter === 'TOMORROW' && item.date === t1 && !isD) show = true;
-                // Core fix: Only show if NOT approved yet
+                // Core fix: Only show on Shiva's filter if NOT approved yet
                 else if(currentFilter === 'NEW_QC_PENDING' && (item.statusText === 'NEW' || item.statusText === 'PENDING') && !item.approved && !isD) show = true;
                 else if(item.statusText === currentFilter && !isD) show = true;
 
@@ -737,7 +770,6 @@
 
         function dispatch(id) {
             const item = globalData.find(i => i.id === id);
-            const userPerms = activePasswords[currentUser].perms;
             const dDate = new Date().toLocaleDateString('en-GB'); 
             
             const bDateRaw = item.billDate || item.date || getLocalDate();
@@ -758,6 +790,7 @@
 
         // ================= COMPLAINTS LOGIC =================
         function loadComplaints() {
+            compRef.off('value');
             compRef.on('value', snap => {
                 const data = snap.val() || {};
                 globalComplaints = Object.keys(data).map(k => ({...data[k], id: k})).reverse();

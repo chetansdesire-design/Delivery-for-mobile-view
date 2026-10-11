@@ -1,0 +1,287 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Urban Casa Mobile</title>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+<style>
+:root{--bg:#f1f5f9;--dark:#1e293b;--blue:#2563eb;--txt:#0f172a;--dim:#64748b;--red:#991b1b;--green:#059669;--bd:#e2e8f0}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+body{margin:0;font-family:-apple-system,'Inter',Segoe UI,sans-serif;background:var(--bg);color:var(--txt);font-size:13px;padding-bottom:90px}
+#login{position:fixed;inset:0;background:var(--bg);z-index:100;display:flex;align-items:center;justify-content:center;padding:20px}
+.box{background:#fff;border-radius:16px;padding:26px;width:100%;max-width:340px;text-align:center;box-shadow:0 10px 30px rgba(0,0,0,.1)}
+.box h2{color:var(--blue);margin:0;font-weight:900}
+.sub{font-size:9px;color:var(--dim);font-weight:800;margin:3px 0 16px}
+input,select{width:100%;padding:11px;border:1px solid var(--bd);border-radius:8px;font-size:15px;background:#f8fafc;font-family:inherit}
+.rb{display:block;width:100%;border:0;color:#fff;font-weight:800;padding:13px;margin-top:8px;border-radius:8px;font-size:12px;text-transform:uppercase}
+header{position:sticky;top:0;z-index:20;background:var(--dark);color:#fff;padding:10px 12px;padding-top:calc(10px + env(safe-area-inset-top))}
+.hr{display:flex;align-items:center;gap:8px;margin-bottom:8px}
+.hr b{flex:1;font-size:14px}.hr small{font-size:10px;background:rgba(255,255,255,.15);padding:4px 8px;border-radius:6px}
+.ib{background:rgba(255,255,255,.12);border:0;color:#fff;border-radius:8px;padding:7px 10px;font-size:15px}
+#search{background:rgba(255,255,255,.12);color:#fff;border:0;padding:9px;font-size:14px}
+#search::placeholder{color:#cbd5e1}
+.chips{display:flex;gap:6px;overflow-x:auto;padding:8px 12px;background:#fff;border-bottom:1px solid var(--bd);position:sticky;top:96px;z-index:15;scrollbar-width:none}
+.chip{flex:none;padding:7px 11px;border-radius:20px;background:var(--bg);font-weight:800;font-size:11px;border:1px solid var(--bd);white-space:nowrap}
+.chip.on{background:var(--blue);color:#fff;border-color:var(--blue)}
+.chip i{font-style:normal;background:rgba(0,0,0,.12);border-radius:10px;padding:1px 6px;margin-left:4px;font-size:10px}
+@keyframes bl{50%{background:#dc2626;color:#fff}}.blink{animation:bl 1s infinite}
+#list{padding:10px}
+.card{background:#fff;border-radius:12px;padding:12px;margin-bottom:10px;border:1px solid var(--bd);box-shadow:0 1px 4px rgba(0,0,0,.04)}
+.top{display:flex;justify-content:space-between;gap:8px;align-items:flex-start}
+.nm{font-weight:800;font-size:14px}
+.wa{color:var(--blue);font-weight:800;text-decoration:none;font-size:12px}
+.meta{display:grid;grid-template-columns:1fr 1fr;gap:4px 10px;margin:8px 0;font-size:11px;color:var(--dim)}
+.meta b{color:var(--txt)}
+.pill{padding:6px 10px;border-radius:6px;font-size:10px;font-weight:800;border:1px solid transparent;text-transform:uppercase;display:inline-block}
+.s-new{background:#fce7f3;color:#be185d;border-color:#f9a8d4}.s-pending{background:var(--red);color:#fff}.s-del{background:#dcfce7;color:#166534;border-color:#bbf7d0}
+.p-no{background:#f1f5f9;color:#64748b}.p-yes{background:#fee2e2;color:#dc2626;border-color:#fecaca}.p-done{background:#dcfce7;color:#15803d}
+@keyframes pp{50%{background:#fecaca}}.pblink{animation:pp 1.5s infinite}
+.row{display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin-top:6px}
+.log{font-size:9px;color:var(--dim);font-weight:700;margin-top:3px}
+.d-over{color:var(--red)}.d-near{color:#1e40af}.d-far{color:#c2410c}.d-fin{color:var(--green)}
+.dt{border:0;background:transparent;font-weight:900;font-size:12px;padding:0;width:105px}
+.btn{border:0;border-radius:8px;padding:10px 14px;font-weight:800;font-size:12px;color:#fff;background:var(--blue)}
+.fab{position:fixed;right:16px;bottom:calc(20px + env(safe-area-inset-bottom));width:56px;height:56px;border-radius:50%;background:var(--blue);color:#fff;font-size:28px;border:0;box-shadow:0 6px 16px rgba(37,99,235,.4);z-index:30}
+.grp{background:#cbd5e1;text-align:center;font-weight:900;font-size:11px;padding:6px;border-radius:8px;margin-bottom:8px}
+#ov{position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:60;display:none;align-items:flex-end}
+#sh{background:#fff;width:100%;max-height:92vh;overflow-y:auto;border-radius:18px 18px 0 0;padding:16px;padding-bottom:calc(20px + env(safe-area-inset-bottom))}
+#sh h3{margin:0 0 10px;color:var(--blue);display:flex;justify-content:space-between}
+.f{margin-bottom:9px}.f label{font-size:9px;font-weight:800;color:var(--dim);text-transform:uppercase;display:block;margin-bottom:3px}
+.g2{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.info{display:flex;justify-content:space-between;background:#e0f2fe;padding:9px;border-radius:8px;font-weight:800;margin:8px 0}
+.tx{display:flex;justify-content:space-between;padding:6px 2px;border-bottom:1px solid #f1f5f9;font-size:11px}
+.empty{text-align:center;color:var(--dim);padding:40px 10px;font-weight:700}
+img.th{width:46px;height:46px;object-fit:cover;border-radius:6px}
+</style>
+</head>
+<body>
+<div id="login"><div class="box"><h2>URBAN CASA</h2><div class="sub">PREMIUM MODULAR KITCHENS & WARDROBES<br>MOBILE v1.0</div>
+<input type="password" id="pw" placeholder="Password" style="text-align:center;letter-spacing:2px;margin-bottom:6px"><div id="roles"></div></div></div>
+
+<header>
+<div class="hr"><b>URBAN CASA</b><small id="who">--</small><button class="ib" onclick="openAct()">⏱️</button><button class="ib" onclick="openMenu()">⚙️</button><button class="ib" onclick="location.reload()">🚪</button></div>
+<input id="search" placeholder="🔍 Search anything..." oninput="S=this.value.toUpperCase();render()">
+</header>
+<div class="chips" id="chips"></div>
+<div id="list"></div>
+<button class="fab" id="fab" onclick="openForm()">+</button>
+<div id="ov" onclick="if(event.target===this)closeSh()"><div id="sh"></div></div>
+
+<script>
+firebase.initializeApp({databaseURL:"https://new-dispatch-approval-default-rtdb.firebaseio.com/"});
+const db=firebase.database(),recs=db.ref('dispatch_records'),comps=db.ref('complaints_records'),passRef=db.ref('app_settings/passwords'),actRef=db.ref('activity_logs');
+let P={'Admin':'admin789','Mannu':'mannu123'},R='',F='all',S='',D=[],C=[],A=[],payId=null,editId=null,upId=null,upField=null;
+const $=id=>document.getElementById(id);
+const esc=s=>String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const iso=d=>d.toISOString().split('T')[0];
+const has=s=>R.includes(s);
+const role=()=>{const fin=has('Admin')||has('Cashier')||has('Accountant'),mannu=R.toLowerCase().includes('mannu'),svc=has('Service'),sup=has('Supervisor')||has('Dispatch');return{fin,mannu,svc,sup,appr:fin||mannu,cash:has('Cashier')||has('Accountant'),admin:has('Admin')}};
+
+passRef.on('value',s=>{if(s.val())P=s.val();roles()});
+actRef.limitToLast(50).on('value',s=>{const d=s.val()||{};A=Object.values(d).sort((a,b)=>new Date(b.time)-new Date(a.time))});
+function roles(){const c=['#2563eb','#7c3aed','#059669','#f59e0b','#dc2626','#0891b2','#4f46e5'];$('roles').innerHTML=Object.keys(P).map((r,i)=>`<button class="rb" style="background:${c[i%7]}" onclick="login('${esc(r)}')">${esc(r)}</button>`).join('')}
+function track(t,m){actRef.push({type:t,msg:m,user:R?R.split(' ')[0].toUpperCase():'SYSTEM',time:new Date().toISOString()})}
+function logInfo(){const n=new Date();return `${R.split(' ')[0].toUpperCase()} @ ${n.getDate()}/${n.getMonth()+1} ${n.toLocaleTimeString([],{hour:'2-digit',minute:'2-digit',hour12:false})}`}
+
+function login(r){
+ if($('pw').value!==P[r])return alert('Wrong Password');
+ R=r;$('login').style.display='none';$('who').innerText=r;
+ const x=role();$('fab').style.display=(x.sup||x.svc)?'none':'block';
+ recs.on('value',s=>{const d=s.val()||{};D=Object.keys(d).map(k=>({...d[k],id:k}));render()});
+ comps.on('value',s=>{const d=s.val()||{};C=Object.keys(d).map(k=>({...d[k],id:k})).reverse();render()});
+ track('LOGIN','User logged in');
+}
+
+const sortD=i=>i.deliveredDate||i.date;
+function calc(i){let b=Number(i.payAmount||0),p=0;if(i.transactions)Object.values(i.transactions).forEach(t=>{b-=Number(t.amount);p+=Number(t.amount)});return{bal:b,paid:p}}
+
+function render(){
+ if(!R)return;
+ const x=role(),today=new Date();today.setHours(0,0,0,0);
+ const tom=new Date(today);tom.setDate(tom.getDate()+1);const p2=new Date(today);p2.setDate(p2.getDate()+2);
+ const n={all:0,qc:0,rdy:0,un:0,del:0,mon:0,tod:0,tom:0,ovr:0,amt:0};
+ D.forEach(i=>{const d=new Date(i.date);d.setHours(0,0,0,0);const fin=i.statusText==='DELIVERED',{bal}=calc(i);
+  if(i.payPending==='YES'&&!i.payReceived&&bal>0)n.amt+=bal;
+  if(!fin){n.all++;if(i.statusText==='NEW')n.qc++;if(i.statusText==='PENDING'){i.approved?n.rdy++:n.un++}
+   if(d.getTime()===today.getTime())n.tod++;else if(d.getTime()===tom.getTime())n.tom++;else if(d<today)n.ovr++}
+  else{n.del++;const f=new Date(sortD(i));if(f.getMonth()===today.getMonth()&&f.getFullYear()===today.getFullYear())n.mon++}});
+ const ca=C.filter(c=>c.statusText!=='RESOLVED').length;
+ const ch=[['all','Active',n.all],['NEW','QC',n.qc,x.cash],['PENDING','Ready',n.rdy],['unapproved','UnApproved',n.un,x.sup||x.svc],['DELIVERED','Delivered',n.del],['month','Month Del.',n.mon],['today','Today',n.tod],['tomorrow','Tomorrow',n.tom],['overdue','Overdue',n.ovr],['pay','Pay ₹'+n.amt,''],['comp','Complaints',ca,!(x.fin||x.svc)]];
+ $('chips').innerHTML=ch.filter(c=>!c[3]).map(c=>{const bl=((c[0]==='NEW'&&n.qc)||(c[0]==='unapproved'&&n.un)||(c[0]==='pay'&&n.amt)||(c[0]==='comp'&&ca))&&F!==c[0]?'blink':'';return `<div class="chip ${F===c[0]?'on':''} ${bl}" onclick="setF('${c[0]}')">${c[1]}${c[2]!==''?`<i>${c[2]}</i>`:''}</div>`}).join('');
+ if(F==='comp'){renderComps();return}
+ const dsort=(F==='DELIVERED'||F==='month');
+ const arr=[...D].sort((a,b)=>{const A1=new Date(dsort?sortD(a):a.date),B1=new Date(dsort?sortD(b):b.date);return A1-B1===0?(b.id>a.id?1:-1):B1-A1});
+ let h='',last=null,cnt=0;
+ arr.forEach(i=>{
+  const d=new Date(i.date);d.setHours(0,0,0,0);const fin=i.statusText==='DELIVERED',sd=new Date(sortD(i));
+  const full=`${i.billNo||''} ${i.name||''} ${i.phone||''} ${i.exec||''} ${i.loc||''} ${i.qty||''} ${i.statusText||''} ${i.date||''} ${i.deliveredDate||''} ${i.payAmount||''} ${i.payLog||''}`.toUpperCase();
+  const ms=S!==''&&full.includes(S);
+  const mf=S===''&&((F==='all'&&!fin)||(F==='DELIVERED'&&fin)||(F==='month'&&fin&&sd.getMonth()===today.getMonth()&&sd.getFullYear()===today.getFullYear())||(F==='NEW'&&i.statusText==='NEW')||(F==='unapproved'&&!i.approved&&i.statusText==='PENDING')||(F==='PENDING'&&i.statusText==='PENDING'&&i.approved)||(F==='today'&&d.getTime()===today.getTime()&&!fin)||(F==='tomorrow'&&d.getTime()===tom.getTime()&&!fin)||(F==='overdue'&&d<today&&!fin)||(F==='pay'&&i.payPending==='YES'&&!i.payReceived));
+  if(!ms&&!mf)return;cnt++;
+  if(dsort&&mf){const k=sd.toLocaleDateString('en-GB'),t=new Date().toLocaleDateString('en-GB'),y=new Date();y.setDate(y.getDate()-1);
+   if(k!==last){last=k;h+=`<div class="grp">📦 DELIVERIES FOR: ${k===t?'TODAY':k===y.toLocaleDateString('en-GB')?'YESTERDAY':k}</div>`}}
+  h+=card(i,x,d,today,p2,fin)});
+ $('list').innerHTML=h||'<div class="empty">No records found</div>';
+}
+
+function card(i,x,d,today,p2,fin){
+ const {bal}=calc(i),dc=fin?'d-fin':d<today?'d-over':d<=p2?'d-near':'d-far';
+ const sc=i.statusText==='NEW'?'s-new':i.statusText==='PENDING'?'s-pending':'s-del';
+ const canCycle=!(x.svc||x.cash||(x.sup&&i.statusText!=='NEW'));
+ let pay='';
+ if(x.fin||x.sup){const urgent=i.payPending==='YES'&&!i.payReceived&&bal>0,oc=x.fin?`onclick="openPay('${i.id}')"`:'';
+  pay=i.payPending==='NO'?`<span class="pill p-no" ${oc}>Pay: NO</span>`:i.payReceived?`<span class="pill p-done" ${oc}>PAID</span>`:`<span class="pill p-yes ${urgent?'pblink':''}" ${oc}>DUE ₹${bal>0?bal:i.payAmount}</span>`}
+ const appr=(x.appr&&i.statusText==='PENDING')?`<label style="font-weight:800;font-size:11px"><input type="checkbox" style="width:auto;vertical-align:middle" ${i.approved?'checked':''} onchange="toggleAppr('${i.id}',${!!i.approved})"> Approve</label>`:'';
+ const exp=(i.approved&&!fin&&!x.svc&&!x.cash)?`<button class="btn" onclick="exportDC('${i.id}')">EXPORT DC</button>`:'';
+ const ed=x.fin?`<button class="btn" style="background:#f59e0b" onclick="openForm('${i.id}')">✏️</button>`:'',del=x.admin?`<button class="btn" style="background:var(--red)" onclick="delOrder('${i.id}')">🗑️</button>`:'';
+ return `<div class="card"><div class="top"><div><div class="nm">${esc(i.name)}</div><a class="wa" href="https://wa.me/91${esc(i.phone)}" target="_blank">📱 ${esc(i.phone)||'---'}</a></div>
+ <div style="text-align:right"><span class="pill ${sc}" ${canCycle?`onclick="cycle('${i.id}','${i.statusText}')"`:''}>${i.statusText}</span><div class="log">${esc(i.statusLog)}</div></div></div>
+ <div class="meta"><span>Bill: <b>${esc(i.billNo)||'-'}</b></span><span>Qty: <b>${esc(i.qty)||0}</b></span><span>Exec: <b>${esc(i.exec)||'-'}</b></span><span>Area: <b>${esc(i.loc)||'-'}</b></span>
+ <span>Date: <input type="date" class="dt ${dc}" value="${i.date}" ${x.svc?'disabled':''} onchange="chDate('${i.id}',this.value)"></span><span>Total: <b>₹${i.payAmount||0}</b></span></div>
+ <div class="row">${pay}${appr}${exp}${ed}${del}</div>${i.payReceived&&i.payLog?`<div class="log">${esc(i.payLog)}</div>`:''}</div>`;
+}
+
+function setF(f){F=f;S='';$('search').value='';render();window.scrollTo(0,0)}
+function toggleAppr(id,cur){const i=D.find(z=>z.id===id);recs.child(id).update({approved:!cur});track('ORDER','Toggled Approval for '+i.name)}
+function chDate(id,v){const i=D.find(z=>z.id===id);recs.child(id).update({date:v});track('ORDER','Changed Date for '+i.name)}
+function cycle(id,cur){
+ const s={NEW:{t:'PENDING',c:'status-pending',a:false},PENDING:{t:'DELIVERED',c:'status-delivered',a:true},DELIVERED:{t:'NEW',c:'status-new',a:false}},n=s[cur];
+ const u={statusText:n.t,statusClass:n.c,approved:n.a,statusLog:logInfo(),deliveredDate:n.t==='DELIVERED'?iso(new Date()):null};
+ const i=D.find(z=>z.id===id);recs.child(id).update(u).then(()=>track('ORDER',`Updated Status for ${i.name} to ${n.t}`));
+}
+function delOrder(id){if(!confirm('Delete this order completely?'))return;const i=D.find(z=>z.id===id);recs.child(id).remove().then(()=>track('DELETE',`Deleted Order: ${i.name} (Bill: ${i.billNo||'N/A'})`))}
+function exportDC(id){
+ const i=D.find(z=>z.id===id);
+ openSh(hd('DISPATCH CHALLAN')+`<div class="info"><span>${esc(i.name)}</span><span>Bill ${esc(i.billNo)||'-'}</span></div>
+ <div class="g2"><div class="f"><label>Qty</label><input value="${esc(i.qty)||0}" disabled></div><div class="f"><label>Packages *</label><input id="pk" type="number" inputmode="numeric" value="${esc(i.packages||i.qty||'')}"></div></div>
+ <button class="btn" style="width:100%;padding:14px;background:#25d366" onclick="sendDC('${id}')">📲 SEND TO WHATSAPP & MARK DELIVERED</button>`);
+}
+function sendDC(id){
+ const i=D.find(z=>z.id===id),pk=$('pk').value;if(pk==='')return alert('Enter number of packages');
+ const {bal}=calc(i),due=(i.payPending==='YES'&&!i.payReceived&&bal>0)?'₹'+bal:'PAID';
+ const t=`URBAN CASA DISPATCH\n------------------------------------------\n📅Dispatch Date: ${new Date().toLocaleDateString('en-GB')}\n\n📅Bill Date: ${new Date(i.date).toLocaleDateString('en-GB')}\n\n🧾Bill No: ${i.billNo||'-'}\n\n👤Customer: ${i.name}\n\n📱Mobile: ${i.phone||'-'}\n\n👤Sales Executive: ${i.exec||'-'}\n\n📍Location: ${i.loc||'-'}\n\n📒Qty: ${i.qty||0}\n\n📦Packages: ${pk}\n\n💰Payment Due: ${due}\n\n✅QC Checked By: ${R.split(' ')[0]}\n------------------------------------------\n🚚Status: Dispatched`;
+ recs.child(id).update({packages:pk,statusText:'DELIVERED',statusClass:'status-delivered',approved:true,deliveredDate:iso(new Date()),statusLog:logInfo()});
+ track('ORDER','Exported DC & Marked Delivered for '+i.name);
+ closeSh();
+ window.open('https://wa.me/?text='+encodeURIComponent(t),'_blank');
+}
+
+/* ---------- Sheets ---------- */
+function openSh(h){$('sh').innerHTML=h;$('ov').style.display='flex'}
+function closeSh(){$('ov').style.display='none';payId=null;editId=null}
+const hd=t=>`<h3>${t}<span onclick="closeSh()" style="cursor:pointer;color:var(--dim)">✖</span></h3>`;
+
+function openForm(id){
+ editId=id||null;const i=id?D.find(z=>z.id===id):{};
+ openSh(hd(id?'EDIT ORDER':'NEW ORDER')+`
+ <div class="f"><label>Customer Name</label><input id="fn" value="${esc(i.name)}"></div>
+ <div class="g2"><div class="f"><label>Mobile</label><input id="fp" type="tel" value="${esc(i.phone)}"></div><div class="f"><label>Bill No</label><input id="fb" value="${esc(i.billNo)}"></div>
+ <div class="f"><label>Qty</label><input id="fq" value="${esc(i.qty)}"></div><div class="f"><label>Exec</label><input id="fe" value="${esc(i.exec)}"></div>
+ <div class="f"><label>Area</label><input id="fl" value="${esc(i.loc)}"></div><div class="f"><label>Bill Date</label><input id="fd" type="date" value="${i.date||iso(new Date())}"></div>
+ <div class="f"><label>Pay Pending</label><select id="fy"><option>NO</option><option ${i.payPending==='YES'?'selected':''}>YES</option></select></div><div class="f"><label>Bill Amt *</label><input id="fa" type="number" value="${i.payAmount||''}"></div></div>
+ <button class="btn" style="width:100%;padding:14px;margin-top:6px" onclick="saveOrder()">${id?'UPDATE':'+ ADD ORDER'}</button>`);
+}
+function saveOrder(){
+ const n=$('fn').value,d=$('fd').value,a=$('fa').value;
+ if(!n||!d)return alert('Name & Date Required');if(a==='')return alert('Total Bill Amount is mandatory!');
+ const e={name:n.toUpperCase(),phone:$('fp').value,billNo:$('fb').value,qty:$('fq').value,exec:$('fe').value.toUpperCase(),loc:$('fl').value.toUpperCase(),date:d,payPending:$('fy').value,payAmount:Number(a)||0};
+ if(editId){const o=D.find(z=>z.id===editId);e.statusLog=(o&&o.statusLog||'')+' | Edited by '+R.split(' ')[0];recs.child(editId).update(e);track('ORDER','Edited Order Details for '+e.name)}
+ else{Object.assign(e,{entryDate:iso(new Date()),statusText:'NEW',statusClass:'status-new',approved:false,payReceived:false,statusLog:logInfo()});recs.push(e).then(()=>track('ORDER','Added New Order for '+e.name))}
+ closeSh();
+}
+
+/* ---------- Payments ---------- */
+function openPay(id){
+ payId=id;const i=D.find(z=>z.id===id);if(!i)return;const {paid,bal}=calc(i),settled=i.payReceived||bal<=0;
+ let tx='';if(i.transactions)Object.keys(i.transactions).forEach(k=>{const t=i.transactions[k];tx+=`<div class="tx"><span style="color:var(--dim)">${esc(t.date)}</span><b style="color:var(--green)">₹${t.amount}</b><span>${esc(t.notes)}</span>${R.includes('Admin')?`<span onclick="delTx('${id}','${k}')">🗑️</span>`:''}</div>`});
+ openSh(hd(esc(i.name).toUpperCase())+`
+ <div class="g2" style="align-items:end"><div class="f"><label>Pay Pending?</label><select id="mp" onchange="$('ma').disabled=this.value==='NO'"><option>NO</option><option ${i.payPending==='YES'?'selected':''}>YES</option></select></div>
+ <div class="f"><label>Total Bill (₹)</label><input id="ma" type="number" value="${i.payAmount||''}" ${i.payPending==='NO'?'disabled':''}></div></div>
+ <button class="btn" style="width:100%;margin-bottom:8px" onclick="updMaster()">UPDATE BILL</button>
+ ${i.payPending==='NO'?'':`<div class="info"><span>Total ₹${i.payAmount}</span><span style="color:var(--green)">Paid ₹${paid}</span><span style="color:${bal>0?'var(--red)':'var(--green)'}">Bal ₹${bal>0?bal:0}</span></div>
+ <div style="max-height:150px;overflow-y:auto;margin-bottom:8px">${tx||'<div class="empty" style="padding:12px">No transactions yet</div>'}</div>
+ ${settled?(R.includes('Admin')?`<button class="btn" style="width:100%;background:var(--red)" onclick="reopenPay()">RE-OPEN ACCOUNT</button>`:'<div class="empty" style="padding:8px">✅ Settled</div>'):`
+ <div class="row" style="margin-bottom:8px">${[[.1,'10% Advance Booking','10% ADV'],[.5,'50% Production Start','50% PROD'],[.3,'30% Material Arrival','30% MAT'],[.1,'10% Completion','10% COMP']].map(q=>`<button class="btn" style="background:#e2e8f0;color:#475569;flex:1;padding:8px 4px;font-size:10px" onclick="quick(${q[0]},'${q[1]}')">${q[2]}</button>`).join('')}</div>
+ <div class="g2"><div class="f"><label>Pay (₹)</label><input id="pa" type="number" value="${bal>0?bal:''}"></div><div class="f"><label>Mode / Note</label><input id="pn" placeholder="UPI, Cash"></div></div>
+ <button class="btn" style="width:100%;background:var(--green);margin-bottom:8px" onclick="addTx()">+ ADD PAYMENT</button>
+ <button class="btn" style="width:100%" onclick="fullPaid()">MARK FULL PAID</button>`}`}`);
+}
+function quick(p,n){const i=D.find(z=>z.id===payId);$('pa').value=Math.round(Number(i.payAmount)*p);$('pn').value=n}
+function updMaster(){
+ const i=D.find(z=>z.id===payId),pend=$('mp').value,amt=Number($('ma').value)||0,u={payPending:pend};
+ if(pend==='YES'){if(amt<=0)return alert('Enter valid Total Bill Amount');u.payAmount=amt;const {paid}=calc(i);
+  if(paid>0&&paid>=amt){u.payReceived=true;u.payLog=(i.payLog||'').includes('SETTLED')?i.payLog:((i.payLog||'')+' - SETTLED')}else if(paid<amt)u.payReceived=false}
+ else{u.payAmount=0;u.payReceived=false}
+ recs.child(payId).update(u).then(()=>{track('PAYMENT',`Updated Master Bill for ${i.name} to ₹${amt}`);const id=payId;setTimeout(()=>openPay(id),300)});
+}
+function addTx(){
+ const i=D.find(z=>z.id===payId),amt=Number($('pa').value),nt=$('pn').value;if(!amt||amt<=0)return alert('Enter valid amount');
+ const full=calc(i).paid+amt>=Number(i.payAmount),id=payId;
+ recs.child(id).child('transactions').push().set({amount:amt,notes:nt||'N/A',date:new Date().toLocaleDateString('en-GB'),log:logInfo()}).then(()=>{
+  const u={payLog:`Last: ₹${amt} (${nt||'N/A'})`};if(full){u.payReceived=true;u.payLog+=' - SETTLED'}
+  recs.child(id).update(u);track('PAYMENT',`Added ₹${amt} to ${i.name}${full?' (SETTLED)':''}`);setTimeout(()=>openPay(id),300)});
+}
+function fullPaid(){if(!confirm('Mark fully settled?'))return;const i=D.find(z=>z.id===payId),id=payId;recs.child(id).update({payReceived:true,payLog:'Settled Manual - '+logInfo()});track('PAYMENT','Manually Marked Settled for '+i.name);setTimeout(()=>openPay(id),300)}
+function reopenPay(){if(!confirm('Re-open this account?'))return;const i=D.find(z=>z.id===payId),id=payId;recs.child(id).update({payReceived:false,payLog:'Reopened - '+logInfo()});track('PAYMENT','Re-Opened payment account for '+i.name);setTimeout(()=>openPay(id),300)}
+function delTx(rid,tid){
+ if(!R.includes('Admin'))return;if(!confirm('Delete this payment record?'))return;const i=D.find(z=>z.id===rid);
+ recs.child(rid).child('transactions').child(tid).remove().then(()=>{let t=0,ln='N/A',la=0;
+  if(i.transactions)Object.keys(i.transactions).forEach(k=>{if(k!==tid){t+=Number(i.transactions[k].amount);ln=i.transactions[k].notes;la=i.transactions[k].amount}});
+  const f=t>=Number(i.payAmount);recs.child(rid).update({payReceived:f,payLog:t>0?`Last: ₹${la} (${ln})${f?' - SETTLED':''}`:null});
+  track('DELETE','Deleted a payment transaction for '+i.name);setTimeout(()=>openPay(rid),300)});
+}
+
+/* ---------- Complaints ---------- */
+function img(id,b,f,up){return b?`<img class="th" src="${b}" onclick="window.open(this.src)">${up?`<div onclick="pick('${id}','${f}')" style="font-size:9px;color:var(--blue);font-weight:800">🔄 Replace</div>`:''}`:(up?`<button class="btn" style="padding:6px 8px;font-size:10px" onclick="pick('${id}','${f}')">📷 ${f}</button>`:'')}
+function renderComps(){
+ const up=has('Admin')||has('Service');
+ let h=`<button class="btn" style="width:100%;background:var(--red);margin-bottom:10px;padding:13px" onclick="openComp()">+ LOG NEW COMPLAINT</button>`;
+ const l=C.filter(c=>S===''||`${c.name||''} ${c.phone||''} ${c.loc||''} ${c.details||''} ${c.notes||''} ${c.statusText||''}`.toUpperCase().includes(S));
+ h+=l.map(c=>{const sc=c.statusText==='IN PROGRESS'?'s-pending':c.statusText==='RESOLVED'?'s-del':'s-new';
+  return `<div class="card"><div class="top"><div><div class="nm">${esc(c.name)}</div><a class="wa" href="https://wa.me/91${esc(c.phone)}" target="_blank">📱 ${esc(c.phone)||'-'}</a></div>
+  <div style="text-align:right"><span class="pill ${sc}" onclick="cycComp('${c.id}','${c.statusText||'NEW'}')">${c.statusText||'NEW'}</span><div class="log">${esc(c.statusLog)}</div></div></div>
+  <div class="meta"><span>Date: <b>${new Date(c.date).toLocaleDateString('en-GB')}</b></span><span>Area: <b>${esc(c.loc)||'-'}</b></span></div>
+  <div><b>${esc(c.details)||'-'}</b></div>${c.notes?`<div class="log">Notes: ${esc(c.notes)}</div>`:''}
+  <div class="row">${img(c.id,c.before,'before',up)}${img(c.id,c.after,'after',up)}${has('Admin')?`<button class="btn" style="background:var(--red);margin-left:auto" onclick="delComp('${c.id}')">🗑️</button>`:''}</div></div>`}).join('')||'<div class="empty">No complaints</div>';
+ $('list').innerHTML=h;
+}
+function openComp(){openSh(hd('NEW COMPLAINT')+`<div class="f"><label>Customer</label><input id="cn"></div><div class="g2"><div class="f"><label>Mobile</label><input id="cp" type="tel"></div><div class="f"><label>Area</label><input id="cl"></div></div>
+ <div class="f"><label>Details</label><input id="cd"></div><div class="f"><label>Notes</label><input id="cr"></div><div class="f"><label>Date</label><input id="cdt" type="date" value="${iso(new Date())}"></div>
+ <div class="g2"><div class="f"><label>Before Pic</label><input type="file" id="cb" accept="image/*"></div><div class="f"><label>After Pic</label><input type="file" id="ca" accept="image/*"></div></div>
+ <button class="btn" id="cbtn" style="width:100%;padding:14px;background:var(--red)" onclick="saveComp()">+ LOG COMPLAINT</button>`)}
+function compress(f){return new Promise(r=>{const fr=new FileReader();fr.onload=e=>{const im=new Image();im.onload=()=>{const c=document.createElement('canvas'),M=400;let w=im.width,h=im.height;if(w>h){if(w>M){h*=M/w;w=M}}else if(h>M){w*=M/h;h=M}c.width=w;c.height=h;c.getContext('2d').drawImage(im,0,0,w,h);r(c.toDataURL('image/jpeg',.6))};im.src=e.target.result};fr.readAsDataURL(f)})}
+async function saveComp(){
+ const n=$('cn').value,d=$('cdt').value;if(!n||!d)return alert('Missing Info');
+ const b=$('cbtn');b.innerText='Saving...';b.disabled=true;
+ const bf=$('cb').files[0],af=$('ca').files[0];
+ await comps.push({name:n.toUpperCase(),phone:$('cp').value,loc:$('cl').value.toUpperCase(),details:$('cd').value,before:bf?await compress(bf):null,after:af?await compress(af):null,notes:$('cr').value,date:d,statusText:'NEW',statusClass:'status-new',statusLog:logInfo()});
+ track('COMPLAINT','Added New Complaint for '+n.toUpperCase());closeSh();
+}
+function cycComp(id,cur){const s={'NEW':['IN PROGRESS','status-pending'],'IN PROGRESS':['RESOLVED','status-delivered'],'RESOLVED':['NEW','status-new']},n=s[cur],c=C.find(z=>z.id===id);comps.child(id).update({statusText:n[0],statusClass:n[1],statusLog:logInfo()}).then(()=>track('COMPLAINT',`Updated Complaint Status to ${n[0]} for ${c.name}`))}
+function delComp(id){if(!confirm('Delete this complaint?'))return;const c=C.find(z=>z.id===id);comps.child(id).remove().then(()=>track('DELETE','Deleted Complaint Record for '+c.name))}
+function pick(id,f){upId=id;upField=f;const i=document.createElement('input');i.type='file';i.accept='image/*';i.onchange=async e=>{const fl=e.target.files[0];if(!fl)return;const b=await compress(fl),c=C.find(z=>z.id===upId);comps.child(upId).update({[upField]:b,statusLog:logInfo()+' - pic added'});track('COMPLAINT',`Uploaded ${upField} image for ${c.name}`)};i.click()}
+
+/* ---------- Activity & Menu ---------- */
+function openAct(){
+ const col={DELETE:'var(--red)',PAYMENT:'var(--green)',COMPLAINT:'#f59e0b',ORDER:'var(--blue)'};
+ openSh(hd('ACTIVITY LOGS')+(A.length?A.map(l=>{const d=new Date(l.time);return `<div class="tx" style="gap:6px"><span style="color:var(--dim);font-size:9px;width:60px">${d.getDate()}/${d.getMonth()+1} ${d.toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'})}</span><b style="color:${col[l.type]||'#64748b'};width:62px;font-size:10px">${l.type}</b><span style="flex:1;font-weight:600">${esc(l.msg)}</span><b style="font-size:9px;color:var(--dim)">${esc(l.user)}</b></div>`}).join(''):'<div class="empty">No activity yet</div>'));
+}
+function openMenu(){
+ let h=hd('SETTINGS')+`<div class="f"><label>Update My Password</label><input type="password" id="np" placeholder="New Password"></div><button class="btn" style="width:100%;background:var(--green)" onclick="chPass()">UPDATE PASSWORD</button>`;
+ if(R==='Admin'){h+=`<div style="margin-top:16px"><label style="font-size:9px;font-weight:800;color:var(--dim)">MANAGE STAFF (ADMIN)</label>`+Object.keys(P).map(r=>`<div class="tx"><b>${esc(r)}</b><span style="color:var(--dim)">${esc(P[r])}</span>${r!=='Admin'?`<span onclick="delStaff('${esc(r)}')">🗑️</span>`:'<span></span>'}</div>`).join('')+
+ `<div class="g2" style="margin-top:8px"><input id="sn" placeholder="Role e.g. Kajal (Accountant)"><input id="sp" placeholder="Password"></div><button class="btn" style="width:100%;margin-top:8px" onclick="addStaff()">+ ADD / UPDATE STAFF</button></div>`}
+ h+=`<div class="row" style="margin-top:16px"><button class="btn" style="flex:1;background:#475569" onclick="backup()">💾 BACKUP</button><button class="btn" style="flex:1;background:#475569" onclick="$('rf').click()">📂 RESTORE</button></div><input type="file" id="rf" accept=".json" style="display:none" onchange="restore(event)">`;
+ openSh(h);
+}
+function chPass(){const v=$('np').value;if(!v||v.length<4)return alert('Min 4 chars');P[R]=v;passRef.set(P).then(()=>{track('SYSTEM','Updated own password');alert('Password Updated!');closeSh()})}
+function addStaff(){const n=$('sn').value.trim(),p=$('sp').value.trim();if(!n||!p)return alert('Enter Name/Role and Password');P[n]=p;passRef.set(P).then(()=>{track('SYSTEM','Added/Updated Staff: '+n);openMenu()})}
+function delStaff(r){if(!confirm('Remove '+r+'?'))return;delete P[r];passRef.set(P).then(()=>{track('DELETE','Removed Staff: '+r);openMenu()})}
+function backup(){if(!R.includes('Admin')&&!role().fin)return;recs.once('value',s=>{track('SYSTEM','Generated Data Backup');const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([JSON.stringify(s.val(),null,2)],{type:'application/json'}));a.download=`UrbanCasa_Backup_${iso(new Date())}.json`;a.click()})}
+function restore(e){if(!R.includes('Admin'))return alert('Admin only');if(!confirm('Overwrite ALL data?'))return;track('SYSTEM','Restored Data via Backup');const r=new FileReader();r.onload=x=>recs.set(JSON.parse(x.target.result),er=>alert(er?'Error':'OK'));r.readAsText(e.target.files[0])}
+
+roles();
+</script>
+</body>
+</html>

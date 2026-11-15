@@ -1,7 +1,0 @@
-<!DOCTYPE html><html><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Urban Casa</title></head>
-<body><script>
-// One link for everyone. Add ?view=desktop or ?view=mobile to force a version.
-const v=new URLSearchParams(location.search).get('view');
-const mob=v?v==='mobile':(/Android|iPhone|iPod|Mobile/i.test(navigator.userAgent)||innerWidth<=768);
-location.replace(mob?'urbancasa-mobile.html':'urbancasa-desktop.html');
-</script></body></html>
